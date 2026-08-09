@@ -1,20 +1,1237 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<title>Matriculas</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Matrícula - UNAP</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #051045 0%, #051045 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        .container {
+            background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden; width: 100%; max-width: 600px; animation: slideIn 0.6s ease-out;
+        }
+        @keyframes slideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .header {
+            background: linear-gradient(135deg, #1e88e5 0%, #1976d2 100%);
+            color: white; padding: 30px; text-align: center;
+        }
+        .header h1 { font-size: 2.2em; margin-bottom: 10px; font-weight: 700; }
+        .header h2 { font-size: 1.1em; opacity: 0.9; margin-bottom: 10px; }
+        .form-container { padding: 40px; }
+        .form-grid { display: grid; grid-template-columns: 1fr; gap: 25px; margin-bottom: 30px; }
+        .form-group { position: relative; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 0.95em; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 12px;
+            font-size: 16px; transition: all 0.3s ease; background: #f8f9fa;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none; border-color: #1e88e5; background: white;
+            box-shadow: 0 0 0 3px rgba(30,136,229,0.1); transform: translateY(-2px);
+        }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .required::after { content: " *"; color: #e74c3c; font-weight: bold; }
+        .button-container { display: flex; gap: 20px; justify-content: center; margin-top: 30px; flex-wrap: wrap; }
+        .btn {
+            padding: 15px 30px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center;
+            justify-content: center; gap: 10px; min-width: 150px;
+        }
+        .btn-primary { background: linear-gradient(135deg, #1e88e5, #1976d2); color: white; }
+        .btn-secondary { background: linear-gradient(135deg, #666, #555); color: white; }
+        .btn-success { background: linear-gradient(135deg, #4caf50, #45a049); color: white; }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(30,136,229,0.3); }
+        .btn-secondary:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(102,102,102,0.3); }
+        .btn-success:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(76,175,80,0.3); }
+        .btn:disabled { background: #ccc !important; color: #666 !important; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+        .loading { display: none; text-align: center; padding: 40px; }
+        .loading-spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #1e88e5;
+            border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;
+        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .alert { padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: 500; display: none; }
+        .alert-success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .alert-error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .success-container { display: none; text-align: center; padding: 40px; }
+        .success-icon { font-size: 4em; color: #4caf50; margin-bottom: 20px; }
+        .matricula-id {
+            font-size: 2em; font-weight: bold; color: #1e88e5; margin: 20px 0;
+            padding: 20px; background: #e3f2fd; border-radius: 12px; border: 2px solid #1e88e5;
+        }
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); align-items: center;
+            justify-content: center; overflow-y: auto; padding: 20px;
+        }
+        .modal.activo { display: flex; }
+        .modal-content {
+            background: white; border-radius: 20px; width: 100%; max-width: 500px;
+            animation: modalSlideIn 0.3s ease-out; max-height: 90vh; overflow-y: auto;
+            padding: 30px; margin: auto;
+        }
+        @keyframes modalSlideIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal h2 { color: #1e88e5; margin-bottom: 20px; }
+        .modal-buttons {
+            display: flex; gap: 15px; justify-content: center; margin-top: 25px;
+            position: sticky; bottom: 0; background: white; padding: 15px 0 5px;
+        }
+        .input-error { border-color: #e74c3c !important; background: #fdebeb !important; }
+        .input-validating { border-color: #f39c12 !important; background: #fef9e7 !important; }
+        .input-valid { border-color: #27ae60 !important; background: #eafaf1 !important; }
+        .input-warning { border-color: #f39c12 !important; background: #fff8e1 !important; }
+        .validation-icon {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            font-size: 18px; pointer-events: none;
+        }
+        .validation-message { font-size: 12px; margin-top: 5px; font-weight: 500; }
+        .validation-error { color: #e74c3c; }
+        .validation-success { color: #27ae60; }
+        .validation-checking { color: #f39c12; }
+        .validation-warning { color: #b8860b; }
+        .alerta-duplicado-nombre {
+            display: none; background: #fff3e0; border: 1.5px solid #ff9800; color: #7a4100;
+            border-radius: 10px; padding: 12px 16px; font-size: 13px; font-weight: 600;
+            margin-top: 6px; grid-column: 1 / -1;
+        }
+        .alerta-duplicado-nombre.visible { display: block; }
+        @media(max-width:768px) { .button-container, .modal-buttons { flex-direction: column; align-items: center; } .btn { width: 100%; max-width: 300px; } }
+        #instrucciones { padding: 36px 40px 40px; }
+        .instr-titulo {
+            text-align: center; font-size: 1.3em; font-weight: 700; color: #1e88e5;
+            margin-bottom: 22px; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .instr-box {
+            background: #f0f7ff; border: 2px solid #1e88e5; border-radius: 14px;
+            padding: 24px 28px; margin-bottom: 22px;
+        }
+        .instr-box p { font-size: 0.97em; color: #1a2a4a; line-height: 1.85; margin: 0; }
+        .instr-box .instr-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+        .instr-box .instr-item:last-child { margin-bottom: 0; }
+        .instr-num {
+            background: #1e88e5; color: white; border-radius: 50%; width: 26px; height: 26px;
+            min-width: 26px; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.85em; margin-top: 1px;
+        }
+        .instr-nota {
+            background: #fff8e1; border: 1.5px solid #ffc107; border-radius: 10px;
+            padding: 12px 18px; font-size: 0.88em; color: #7a5500; font-weight: 600;
+            margin-bottom: 26px; display: flex; gap: 8px; align-items: flex-start;
+        }
+        .btn-horario {
+            display: block; width: 100%; padding: 14px;
+            background: linear-gradient(135deg, #43a047, #388e3c); color: white;
+            border: none; border-radius: 12px; font-size: 1em; font-weight: 700; cursor: pointer;
+            text-align: center; text-decoration: none; margin-bottom: 14px; transition: all 0.3s;
+        }
+        .btn-horario:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(56,142,60,0.35); }
+        .btn-siguiente {
+            display: block; width: 100%; padding: 16px;
+            background: linear-gradient(135deg, #1e88e5, #1976d2); color: white;
+            border: none; border-radius: 12px; font-size: 1.05em; font-weight: 700;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .btn-siguiente:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(30,136,229,0.35); }
+        .pass-wrap { position: relative; }
+        .pass-toggle {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; font-size: 16px; user-select: none; background: none; border: none;
+        }
+    </style>
 </head>
 <body>
-<iframe src="https://script.google.com/macros/s/AKfycbwOsWcQBGWZGgg-oukd3xyWXA_GAwI_UqJwr0VFnEIdLxnNMU-HzAdZ_FUAgSwnEmiI/exec"
-width="100%"
-height="100%"
-allowfullscreen="true"
-style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none;"></iframe>
+<div class="container">
+    <div class="header">
+        <h1>Sistema de Matriculas 2026-I</h1>
+        <h2>Universidad Nacional del Altiplano</h2>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Logo_UNAP.png/500px-Logo_UNAP.png"
+             style="width:140px;height:auto;margin-top:10px;">
+    </div>
+
+    <!-- Instrucciones -->
+    <div id="instrucciones">
+        <div class="instr-titulo">📋 Instrucciones para la Matrícula</div>
+        <div class="instr-box">
+            <div class="instr-item"><div class="instr-num">1</div><div>Para <strong>evitar colas innecesarias</strong>, separa tu vacante en laboratorios de <strong>Física II y III</strong> usando este formulario en línea.</div></div>
+            <div class="instr-item"><div class="instr-num">2</div><div>Después de separar tu vacante, <strong>imprime o muestra tu comprobante</strong> y preséntate con <strong>S/ 6.00</strong> para las guías e insumos.</div></div>
+            <div class="instr-item"><div class="instr-num">3</div><div>Consulta los <strong>horarios disponibles</strong> en el botón de abajo antes de registrarte.</div></div>
+            <div class="instr-item"><div class="instr-num">4</div><div>En el campo de correo electrónico, de preferencia usa <strong>correo institucional</strong> con dominio @est.unap.edu.pe. Si no posees uno, ¡usa cualquier correo!</div></div>
+            <div class="instr-item"><div class="instr-num">5</div><div>A partir del <strong>viernes 10 de abril</strong>, se recepcionarán las constancias de preinscripción. No es necesario que cada estudiante se presente con su constancia; puede hacerlo el delegado con las preinscripciones y los S/. 6 recaudados. También se puede acercar personalmente al laboratorio de ciencias básicas.</div></div>
+            <div class="instr-item"><div class="instr-num">6</div><div>Crea una <strong>contraseña</strong> al matricularte: te servirá para identificar tu registro más adelante si necesitas hacer alguna consulta.</div></div>
+        </div>
+        <div class="instr-nota">⚠️&nbsp; <span><strong>Nota:</strong> En el cuadro de horarios, <strong>solo los de color verde están habilitados</strong> para matrícula.</span></div>
+        <a href="https://script.google.com/a/macros/unap.edu.pe/s/AKfycbxO52rqw7le_jHvQyG58XtdHqQchblLZOpddWgEG90aIWit6AU6N4Rn575JAF1TAc5E/exec"
+           target="_blank" class="btn-horario">📅 Ver Horarios Disponibles</a>
+        <button class="btn-siguiente" onclick="mostrarFormulario()">Siguiente — Ir al Formulario de Matrícula &nbsp;→</button>
+        <div style="text-align:center; margin-top:18px;">
+            <a href="https://script.google.com/a/macros/unap.edu.pe/s/AKfycbw5YMMvSolpiCYuLQePTv-yvm9uGS04dbg2RoXBGsyg/dev"
+               target="_blank" rel="noopener"
+               style="color:#1e88e5; font-size:0.9em; font-weight:600; text-decoration:underline;">
+                ¿Ya te matriculaste y no pudiste descargar tu comprobante? Recupéralo aquí
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <div id="formulario" class="form-container" style="display:none;">
+        <div class="alert alert-error" id="errorAlert"></div>
+        <form id="matriculaForm" autocomplete="off">
+            <div class="form-grid">
+                <div class="form-group"><label for="codigo" class="required">Código de Estudiante</label><div style="position:relative"><input type="text" id="codigo" name="codigo" required maxlength="6" minlength="6" placeholder="6 dígitos (Ej: 180545)" inputmode="numeric"><div class="validation-icon" id="codigoIcon"></div></div><div class="validation-message" id="codigoMessage"></div></div>
+                <div class="form-group"><label for="laboratorio" class="required">Laboratorio</label><select id="laboratorio" name="laboratorio" required><option value="">Cargando laboratorios...</option></select></div>
+                <div class="form-group"><label for="grupo" class="required">Grupo</label><select id="grupo" name="grupo" required><option value="">Cargando grupos...</option></select><div class="validation-message" id="grupoMessage"></div></div>
+                <div class="form-group"><label for="escuela" class="required">Escuela Profesional</label><select id="escuela" name="escuela" required><option value="">Cargando escuelas...</option></select></div>
+                <div class="form-group"><label for="docente" class="required">Docente de Teoría</label><select id="docente" name="docente" required><option value="">Cargando docentes...</option></select></div>
+                <div class="form-group"><label for="apellidos" class="required">Apellidos</label><input type="text" id="apellidos" name="apellidos" required placeholder="Ingrese sus apellidos completos"></div>
+                <div class="form-group"><label for="nombre" class="required">Nombres</label><input type="text" id="nombre" name="nombre" required placeholder="Ingrese sus nombres completos"></div>
+                <div class="alerta-duplicado-nombre" id="nombreCompletoAlert">⚠️ Ud ya está matriculado con ese nombre completo. Verifique sus datos.</div>
+                <div class="form-group"><label for="celular" class="required">Celular</label><div style="position:relative"><input type="tel" id="celular" name="celular" required pattern="[0-9]{9}" maxlength="9" placeholder="9 dígitos (Ej: 987654321)" inputmode="numeric"><div class="validation-icon" id="celularIcon"></div></div><div class="validation-message" id="celularMessage"></div></div>
+                <div class="form-group"><label for="sexo" class="required">Sexo</label><select id="sexo" name="sexo" required><option value="">Seleccione...</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option></select></div>
+                <div class="form-group"><label for="email" class="required">Correo Electrónico</label><div style="position:relative"><input type="email" id="email" name="email" required placeholder="ejemplo@correo.com"><div class="validation-icon" id="emailIcon"></div></div><div class="validation-message" id="emailMessage"></div></div>
+                <div class="form-group"><label for="clave" class="required">Contraseña</label><div class="pass-wrap"><input type="password" id="clave" name="clave" required minlength="6" maxlength="12" placeholder="Entre 6 y 12 caracteres" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true"><button type="button" class="pass-toggle" data-target="clave">👁️</button></div><div class="validation-message" id="claveMessage"></div></div>
+                <div class="form-group"><label for="repetirClave" class="required">Repetir Contraseña</label><div class="pass-wrap"><input type="password" id="repetirClave" name="repetirClave" required minlength="6" maxlength="12" placeholder="Repita la contraseña" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true"><button type="button" class="pass-toggle" data-target="repetirClave">👁️</button></div><div class="validation-message" id="repetirClaveMessage"></div></div>
+            </div>
+            <div class="button-container">
+                <button type="button" class="btn btn-secondary" onclick="limpiarFormulario()">Limpiar</button>
+                <button type="submit" class="btn btn-primary" id="btnMatricula" disabled>Verificar datos</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="loading" class="loading"><div class="loading-spinner"></div><p>Procesando su matricula...</p></div>
+    <div id="success" class="success-container">
+        <div class="success-icon">&#10003;</div><h2>Matricula Exitosa!</h2><p>Su matricula ha sido registrada correctamente.</p>
+        <div class="matricula-id" id="matriculaId"></div><p><strong>Fecha de registro:</strong> <span id="fechaRegistro"></span></p>
+        <div class="button-container">
+            <button type="button" class="btn btn-success" onclick="descargarPDF()">Descargar Comprobante PDF</button>
+            <button type="button" class="btn btn-secondary" onclick="volverAlFormulario()">Volver al Formulario</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirmModal" class="modal">
+    <div class="modal-content">
+        <h2>Confirmar Matricula</h2><p>Esta seguro que sus datos son correctos?</p><p><strong>Esta accion no se puede deshacer.</strong></p>
+        <div id="datosConfirmacion" style="text-align:left;margin:20px 0;padding:20px;background:#f8f9fa;border-radius:12px;font-size:0.95em;line-height:1.8;"></div>
+        <div class="modal-buttons">
+            <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="confirmarMatricula()">Si, Matricular</button>
+        </div>
+    </div>
+</div>
+
+<div id="qrHiddenContainer" style="position:absolute; left:-9999px; top:-9999px;"></div>
+
 <script>
-window.onload = function() {
-    document.querySelector('iframe').requestFullscreen().catch((err) => {
-    console.error('Error attempting to enable full-screen mode: ${err.message}');
+// ══════════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN DEL PUENTE CON EL BACKEND
+// ══════════════════════════════════════════════════════════════════
+//  Este HTML puede ejecutarse en dos contextos distintos:
+//   a) Servido directamente por Apps Script (doGet) → existe
+//      `google.script.run` y se usa tal cual (más rápido, sin red aparte).
+//   b) Alojado como archivo estático (ej. GitHub Pages) → NO existe
+//      `google.script.run`, así que se llama por HTTP (fetch) a la
+//      URL de despliegue del Web App (termina en /exec).
+//
+//  ⚠️ ACCIÓN REQUERIDA: reemplaza el valor de abajo por la URL real de
+//  tu despliegue de Apps Script ("Implementar" → "Nueva implementación"
+//  → "Aplicación web" → copiar la URL que termina en /exec).
+//  Si esta página se abre siempre dentro de Apps Script (nunca como
+//  archivo suelto en GitHub Pages), puedes dejarlo así, no se usará.
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwDqFgQDXNXe83W3my5r9cfgZN3Mdn3xzE3HYtzVIyNe6d1vlNmGO2Nv6DwEw8YxmRC/exec
+    ';
+
+function escapeHtml(str) {
+    return String(str == null ? '' : str).replace(/[&<>"']/g, function(c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
+}
+
+// ¿Estamos dentro del iframe sandbox que Apps Script inyecta al servir
+// el HTML con HtmlService? Solo ahí existe `google.script.run`.
+const usandoIframeGAS = () => typeof google !== 'undefined' && google.script && google.script.run;
+
+// Puente único hacia el backend. onSuccess/onError reciben el mismo
+// resultado que antes recibían withSuccessHandler/withFailureHandler.
+function llamarAPI(accion, args, onSuccess, onError) {
+    args = args || [];
+
+    if (usandoIframeGAS()) {
+        var caller = google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onError);
+        caller[accion].apply(caller, args);
+        return;
+    }
+
+    if (!WEBAPP_URL || WEBAPP_URL.indexOf('PEGAR_AQUI') !== -1) {
+        onError(new Error('El formulario no está conectado al backend (falta configurar WEBAPP_URL).'));
+        return;
+    }
+
+    // Content-Type: text/plain a propósito: evita el preflight CORS de
+    // OPTIONS, que Apps Script no puede responder.
+    fetch(WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: accion, args: args })
+    })
+        .then(function(res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(onSuccess)
+        .catch(onError);
+}
+
+// ─── Mostrar formulario desde instrucciones ──────────────────────────────────
+function mostrarFormulario() {
+    document.getElementById('instrucciones').style.display = 'none';
+    document.getElementById('formulario').style.display = 'block';
+}
+
+let datosMatricula = {},
+    respuestaServidor = {};
+let timerVal = {};
+
+let dup = { codigo: null, email: null, grupo: null, celular: null, nombre: null };
+
+// ══════════════════════════════════════════════════════════════════
+//  Carga de combos: Grupo / Laboratorio / Escuela / Docente
+//  Todos se leen en vivo desde la hoja "Grupos" vía llamarAPI().
+// ══════════════════════════════════════════════════════════════════
+function cargarGrupos() {
+    llamarAPI('obtenerGrupos', [], poblarGrupos, function() { poblarGrupos(null); });
+}
+
+function poblarGrupos(lista) {
+    const sel = document.getElementById('grupo');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Seleccione...</option>';
+    if (lista === null) {
+        sel.innerHTML += '<option value="" disabled>Sin conexión con el servidor</option>';
+        chkBtn();
+        return;
+    }
+    if (!lista.length) {
+        sel.innerHTML += '<option value="" disabled>No hay grupos habilitados por el momento</option>';
+        chkBtn();
+        return;
+    }
+    lista.forEach(function(g) {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = 'Grupo ' + g;
+        sel.appendChild(opt);
+    });
+    chkBtn();
+}
+
+function poblarSelectGenerico(selectId, lista, sinDatosMsg) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Seleccione...</option>';
+    if (lista === null) {
+        sel.innerHTML += '<option value="" disabled>Sin conexión con el servidor</option>';
+        chkBtn();
+        return;
+    }
+    if (!lista.length) {
+        sel.innerHTML += '<option value="" disabled>' + sinDatosMsg + '</option>';
+        chkBtn();
+        return;
+    }
+    lista.forEach(function(item) {
+        const opt = document.createElement('option');
+        opt.value = item;
+        opt.textContent = item;
+        sel.appendChild(opt);
+    });
+    chkBtn();
+}
+
+function cargarLaboratorios() {
+    llamarAPI('obtenerLaboratorios', [],
+        function(lista) { poblarSelectGenerico('laboratorio', lista, 'No hay laboratorios disponibles'); },
+        function() { poblarSelectGenerico('laboratorio', null, 'No hay laboratorios disponibles'); });
+}
+
+function cargarEscuelas() {
+    llamarAPI('obtenerEscuelas', [],
+        function(lista) { poblarSelectGenerico('escuela', lista, 'No hay escuelas disponibles'); },
+        function() { poblarSelectGenerico('escuela', null, 'No hay escuelas disponibles'); });
+}
+
+function cargarDocentes() {
+    llamarAPI('obtenerDocentes', [],
+        function(lista) { poblarSelectGenerico('docente', lista, 'No hay docentes disponibles'); },
+        function() { poblarSelectGenerico('docente', null, 'No hay docentes disponibles'); });
+}
+
+function chkBtn() {
+    const v = id => (document.getElementById(id) || { value: '' }).value.trim();
+
+    const pass1 = v('clave');
+    const pass2 = v('repetirClave');
+
+    const fmtOk =
+        /^\d{6}$/.test(v('codigo')) &&
+        /^\d{9}$/.test(v('celular')) &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('email')) &&
+        v('grupo') !== '' &&
+        v('apellidos').length > 0 &&
+        v('nombre').length > 0 &&
+        pass1.length >= 6 && pass1.length <= 12 && pass1 === pass2 &&
+        (document.getElementById('sexo') || { value: '' }).value !== '' &&
+        (document.getElementById('escuela') || { value: '' }).value !== '' &&
+        (document.getElementById('laboratorio') || { value: '' }).value !== '' &&
+        (document.getElementById('docente') || { value: '' }).value !== '';
+
+    const sinError =
+        dup.codigo !== false &&
+        dup.email !== false &&
+        dup.grupo !== false &&
+        dup.celular !== false &&
+        dup.nombre !== false;
+
+    const ok = fmtOk && sinError;
+    const btn = document.getElementById('btnMatricula');
+    if (!btn) return;
+    btn.disabled = !ok;
+    btn.style.cssText = ok ?
+        'background:linear-gradient(135deg,#1e88e5,#1976d2);color:#fff;cursor:pointer' :
+        'background:#ccc;color:#666;cursor:not-allowed';
+    btn.textContent = ok ? 'Matricular' : 'Verificar datos';
+}
+
+function setIcon(campo, estado, msg) {
+    const inp = document.getElementById(campo);
+    const ico = document.getElementById(campo + 'Icon');
+    const txt = document.getElementById(campo + 'Message');
+    if (!inp) return;
+    inp.className = inp.className.replace(/\binput-\S+/g, '').trim();
+    switch (estado) {
+        case 'ok':
+            inp.classList.add('input-valid');
+            if (ico) ico.innerHTML = '✅';
+            if (txt) { txt.textContent = msg;
+                txt.className = 'validation-message validation-success'; }
+            break;
+        case 'err':
+            inp.classList.add('input-error');
+            if (ico) ico.innerHTML = '❌';
+            if (txt) { txt.textContent = msg;
+                txt.className = 'validation-message validation-error'; }
+            break;
+        case 'warn':
+            inp.classList.add('input-warning');
+            if (ico) ico.innerHTML = '⚠️';
+            if (txt) { txt.textContent = msg;
+                txt.className = 'validation-message validation-warning'; }
+            break;
+        case 'chk':
+            inp.classList.add('input-validating');
+            if (ico) ico.innerHTML = '⏳';
+            if (txt) { txt.textContent = 'Verificando...';
+                txt.className = 'validation-message validation-checking'; }
+            break;
+        default:
+            if (ico) ico.innerHTML = '';
+            if (txt) { txt.textContent = '';
+                txt.className = 'validation-message'; }
+    }
+}
+
+// Envoltorio con timeout de 8s para las verificaciones "en vivo" (código,
+// email, celular, grupo) mientras el usuario escribe.
+function llamarConTimeout_(campo, accion, args, onResult) {
+    const sk = '_st_' + campo;
+    if (window[sk]) clearTimeout(window[sk]);
+    let done = false;
+
+    window[sk] = setTimeout(function() {
+        if (done) return;
+        done = true;
+        dup[campo] = false;
+        setIcon(campo, 'err', 'Sin respuesta del servidor. Intente de nuevo.');
+        chkBtn();
+    }, 8000);
+
+    llamarAPI(accion, args,
+        function(r) {
+            if (done) return;
+            done = true;
+            clearTimeout(window[sk]);
+            onResult(r);
+            chkBtn();
+        },
+        function() {
+            if (done) return;
+            done = true;
+            clearTimeout(window[sk]);
+            dup[campo] = false;
+            setIcon(campo, 'err', 'Sin conexión con el servidor.');
+            chkBtn();
+        }
+    );
+}
+
+function valCodigo(v) {
+    if (!v) { setIcon('codigo', '');
+        dup.codigo = null;
+        chkBtn(); return; }
+    if (!/^\d{6}$/.test(v)) {
+        setIcon('codigo', 'err', 'Debe tener exactamente 6 dígitos');
+        dup.codigo = false;
+        chkBtn(); return;
+    }
+    setIcon('codigo', 'chk');
+    chkBtn();
+    if (timerVal.codigo) clearTimeout(timerVal.codigo);
+    timerVal.codigo = setTimeout(function() {
+        llamarConTimeout_('codigo', 'verificarDuplicado', ['codigo', v], function(r) {
+            const existe = r && r.existe;
+            dup.codigo = existe ? false : true;
+            setIcon('codigo', existe ? 'err' : 'ok', existe ? 'Código ya registrado' : 'Código disponible');
+        });
+    }, 600);
+}
+
+function valEmail(v) {
+    if (!v) { setIcon('email', '');
+        dup.email = null;
+        chkBtn(); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+        setIcon('email', 'err', 'Correo electrónico inválido');
+        dup.email = false;
+        chkBtn(); return;
+    }
+    setIcon('email', 'chk');
+    chkBtn();
+    if (timerVal.email) clearTimeout(timerVal.email);
+    timerVal.email = setTimeout(function() {
+        llamarConTimeout_('email', 'verificarDuplicado', ['email', v], function(r) {
+            const existe = r && r.existe;
+            dup.email = existe ? false : true;
+            setIcon('email', existe ? 'err' : 'ok', existe ? 'Correo ya registrado' : 'Correo disponible');
+        });
+    }, 600);
+}
+
+function valCelular(v) {
+    if (!v || v.length < 9) { setIcon('celular', '');
+        dup.celular = null;
+        chkBtn(); return; }
+    if (!/^\d{9}$/.test(v)) {
+        setIcon('celular', 'err', 'Debe tener exactamente 9 dígitos');
+        dup.celular = false;
+        chkBtn(); return;
+    }
+    setIcon('celular', 'chk');
+    chkBtn();
+    if (timerVal.celular) clearTimeout(timerVal.celular);
+    timerVal.celular = setTimeout(function() {
+        llamarConTimeout_('celular', 'verificarCelularDuplicado', [v], function(r) {
+            const existe = r && r.existe;
+            dup.celular = existe ? false : true;
+            setIcon('celular', existe ? 'err' : 'ok', existe ? 'Celular ya registrado' : 'Celular disponible');
+        });
+    }, 600);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  valGrupo — al seleccionar un grupo, consulta las vacantes reales
+//  (verificarGrupoLleno en Code.gs) y colorea el estado:
+//    🟢 verde   -> hay vacantes de sobra (menos del 80% ocupado)
+//    🟡 amarillo-> quedan pocas vacantes (80% de ocupación o más)
+//    🔴 rojo    -> el grupo ya está lleno (sin vacantes)
+// ══════════════════════════════════════════════════════════════════
+const UMBRAL_POR_LLENARSE = 0.8; // 80% de ocupación
+
+function valGrupo(v) {
+    if (!v) { setIcon('grupo', '');
+        dup.grupo = null;
+        chkBtn(); return; }
+    setIcon('grupo', 'chk');
+    chkBtn();
+    if (timerVal.grupo) clearTimeout(timerVal.grupo);
+    timerVal.grupo = setTimeout(function() {
+        llamarConTimeout_('grupo', 'verificarGrupoLleno', [v], function(r) {
+            const lleno = r && r.lleno;
+            const cnt = (r && r.count) || 0;
+            const cap = (r && r.capacidad) || 30;
+            const vacantes = Math.max(cap - cnt, 0);
+            const ocupacion = cap > 0 ? (cnt / cap) : 0;
+
+            if (lleno) {
+                dup.grupo = false;
+                setIcon('grupo', 'err', '🔴 Grupo lleno (' + cnt + '/' + cap + ') — sin vacantes');
+            } else if (ocupacion >= UMBRAL_POR_LLENARSE) {
+                dup.grupo = true;
+                setIcon('grupo', 'warn', '🟡 Quedan ' + vacantes + ' vacante(s) — ¡el grupo está por llenarse! (' + cnt + '/' + cap + ')');
+            } else {
+                dup.grupo = true;
+                setIcon('grupo', 'ok', '🟢 ' + vacantes + ' vacante(s) disponible(s) (' + cnt + '/' + cap + ')');
+            }
+        });
+    }, 300);
+}
+
+function valPassword() {
+    const p1 = document.getElementById('clave').value;
+    const p2 = document.getElementById('repetirClave').value;
+
+    if (!p1) { setIcon('clave', ''); } else if (p1.length < 6) setIcon('clave', 'err', 'Mínimo 6 caracteres');
+    else if (p1.length > 12) setIcon('clave', 'err', 'Máximo 12 caracteres');
+    else setIcon('clave', 'ok', 'Contraseña válida');
+
+    if (!p2) { setIcon('repetirClave', ''); } else if (p2.length < 6) setIcon('repetirClave', 'err',
+        'Mínimo 6 caracteres');
+    else if (p2.length > 12) setIcon('repetirClave', 'err', 'Máximo 12 caracteres');
+    else if (p1 !== p2) setIcon('repetirClave', 'err', 'Las contraseñas no coinciden');
+    else setIcon('repetirClave', 'ok', 'Las contraseñas coinciden');
+
+    chkBtn();
+}
+
+window._verificarNombreInternal = function(ap, nm) {
+    const alerta = document.getElementById('nombreCompletoAlert');
+    if (timerVal.nombre) clearTimeout(timerVal.nombre);
+    const sk = '_st_nombre';
+    if (window[sk]) clearTimeout(window[sk]);
+    if (!ap || !nm) {
+        if (alerta) alerta.classList.remove('visible');
+        dup.nombre = null;
+        chkBtn();
+        return;
+    }
+    timerVal.nombre = setTimeout(function() {
+        const handle = function(existe) {
+            dup.nombre = existe ? false : true;
+            if (alerta) alerta.classList.toggle('visible', existe);
+            chkBtn();
+        };
+        let done = false;
+        window[sk] = setTimeout(function() {
+            if (done) return;
+            done = true;
+            dup.nombre = false;
+            if (alerta) { alerta.textContent = '⚠️ Sin respuesta del servidor. Intente de nuevo.';
+                alerta.classList.add('visible'); }
+            chkBtn();
+        }, 8000);
+        llamarAPI('verificarDuplicado', ['nombreCompleto', ap + '||' + nm],
+            function(r) { if (done) return;
+                done = true;
+                clearTimeout(window[sk]);
+                handle(r && r.existe); },
+            function() { if (done) return;
+                done = true;
+                clearTimeout(window[sk]);
+                dup.nombre = false;
+                if (alerta) { alerta.textContent = '⚠️ Sin conexión con el servidor.';
+                    alerta.classList.add('visible'); }
+                chkBtn(); }
+        );
+    }, 600);
 };
+
+document.getElementById('matriculaForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    if (dup.codigo === false || dup.email === false || dup.grupo === false || dup.celular === false || dup
+        .nombre === false) {
+        mostrarError('Corrija los campos marcados en rojo antes de continuar.');
+        return;
+    }
+    if (dup.email === null || dup.celular === null || dup.grupo === null || dup.codigo === null) {
+        mostrarError('Espere a que terminen las verificaciones (⏳) antes de continuar.');
+        return;
+    }
+    const p1 = document.getElementById('clave').value;
+    const p2 = document.getElementById('repetirClave').value;
+    if (p1.length < 6 || p1.length > 12) { mostrarError('La contraseña debe tener entre 6 y 12 caracteres.'); return; }
+    if (p1 !== p2) { mostrarError('Las contraseñas no coinciden.'); return; }
+
+    const fd = new FormData(this);
+    datosMatricula = {};
+    fd.forEach(function(val, key) { datosMatricula[key] = val.trim(); });
+    datosMatricula.password = datosMatricula.clave;
+    delete datosMatricula.clave;
+    delete datosMatricula.repetirClave;
+
+    document.getElementById('datosConfirmacion').innerHTML =
+        '<strong>Resumen de datos:</strong><br><br>' +
+        '<b>Código:</b> ' + escapeHtml(datosMatricula.codigo) + '<br>' +
+        '<b>Grupo:</b> ' + escapeHtml(datosMatricula.grupo) + '<br>' +
+        '<b>Estudiante:</b> ' + escapeHtml(datosMatricula.apellidos) + ', ' + escapeHtml(datosMatricula.nombre) +
+        '<br>' +
+        '<b>Email:</b> ' + escapeHtml(datosMatricula.email) + '<br>' +
+        '<b>Celular:</b> ' + escapeHtml(datosMatricula.celular) + '<br>' +
+        '<b>Sexo:</b> ' + escapeHtml(datosMatricula.sexo) + '<br>' +
+        '<b>Escuela:</b> ' + escapeHtml(datosMatricula.escuela) + '<br>' +
+        '<b>Laboratorio:</b> ' + escapeHtml(datosMatricula.laboratorio) + '<br>' +
+        '<b>Docente:</b> ' + escapeHtml(datosMatricula.docente);
+    document.getElementById('confirmModal').classList.add('activo');
+});
+
+function confirmarMatricula() {
+    cerrarModal();
+    document.getElementById('formulario').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+
+    let respondido = false;
+    const timeoutId = setTimeout(function() {
+        if (respondido) return;
+        respondido = true;
+        onError();
+    }, 45000);
+
+    llamarAPI('guardarDatos', [datosMatricula],
+        function(r) {
+            if (respondido) return;
+            respondido = true;
+            clearTimeout(timeoutId);
+            onExito(r);
+        },
+        function(e) {
+            if (respondido) return;
+            respondido = true;
+            clearTimeout(timeoutId);
+            console.error('guardarDatos failure:', e);
+            onError();
+        }
+    );
+}
+
+function onExito(r) {
+    document.getElementById('loading').style.display = 'none';
+    if (r && r.success) {
+        respuestaServidor = r;
+        document.getElementById('matriculaId').textContent = 'ID de Matrícula: ' + r.idMatricula;
+        document.getElementById('fechaRegistro').textContent = r.timestamp;
+        document.getElementById('success').style.display = 'block';
+    } else {
+        document.getElementById('formulario').style.display = 'block';
+        mostrarError((r && r.error) || 'Error desconocido. Intente nuevamente.');
+    }
+}
+
+// Si el envío falla por red/timeout, intentamos recuperar el registro
+// (puede que sí se haya guardado del lado del servidor aunque la
+// respuesta no haya llegado a tiempo).
+function onError() {
+    document.getElementById('loading').style.display = 'none';
+    const codigo = (datosMatricula && datosMatricula.codigo) || '';
+    const clave = (datosMatricula && datosMatricula.password) || '';
+    if (codigo && clave) {
+        llamarAPI('obtenerMatriculaPorCodigo', [codigo, clave],
+            function(r) {
+                if (r && r.encontrado) {
+                    mostrarComprobanteRecuperado(r);
+                } else {
+                    document.getElementById('formulario').style.display = 'block';
+                    mostrarError('Error de conexión. Sus datos NO se guardaron. Intente nuevamente.');
+                }
+            },
+            function() {
+                document.getElementById('formulario').style.display = 'block';
+                mostrarError('Error de conexión. Verifique su internet e intente nuevamente. ' +
+                    'Si el problema persiste, espere un momento antes de reintentar.');
+            }
+        );
+    } else {
+        document.getElementById('formulario').style.display = 'block';
+        mostrarError('Error de conexión. Intente nuevamente.');
+    }
+}
+
+function mostrarComprobanteRecuperado(r) {
+    datosMatricula = {
+        codigo: r.codigo,
+        apellidos: r.apellidos,
+        nombre: r.nombre,
+        celular: r.celular,
+        sexo: r.sexo,
+        email: r.email,
+        escuela: r.escuela,
+        laboratorio: r.laboratorio,
+        docente: r.docente,
+        grupo: r.grupo
+    };
+    respuestaServidor = { success: true, idMatricula: r.idMatricula, timestamp: r.timestamp };
+    document.getElementById('matriculaId').textContent = 'ID de Matrícula: ' + r.idMatricula;
+    document.getElementById('fechaRegistro').textContent = r.timestamp;
+    document.getElementById('instrucciones').style.display = 'none';
+    document.getElementById('formulario').style.display = 'none';
+    document.getElementById('success').style.display = 'block';
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  LOGO — se descarga una sola vez y se cachea en base64 para el PDF.
+//  Antes se usaba una URL de miniatura de Google (encrypted-tbn0...)
+//  que es temporal y puede dejar de funcionar sin aviso. Ahora se usa
+//  la misma URL estable de Wikimedia que ya se usa en la cabecera.
+// ══════════════════════════════════════════════════════════════════
+let logoDataUrlCache = null;
+const LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Logo_UNAP.png/500px-Logo_UNAP.png';
+
+function cargarLogoDataUrl(callback) {
+    if (logoDataUrlCache) { callback(logoDataUrlCache); return; }
+    try {
+        fetch(LOGO_URL)
+            .then(function(res) { if (!res.ok) throw new Error('logo fetch failed'); return res.blob(); })
+            .then(function(blob) {
+                const reader = new FileReader();
+                reader.onload = function() { logoDataUrlCache = reader.result; callback(logoDataUrlCache); };
+                reader.onerror = function() { callback(null); };
+                reader.readAsDataURL(blob);
+            })
+            .catch(function() { callback(null); });
+    } catch (e) { callback(null); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  PDF — Ficha de Pre-Inscripción tamaño A5 horizontal
+// ══════════════════════════════════════════════════════════════════
+function descargarPDF() {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = 'Generando...';
+    btn.disabled = true;
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a5' });
+        const PW = doc.internal.pageSize.getWidth();
+        const PH = doc.internal.pageSize.getHeight();
+
+        // ── Paleta (coherente con el sistema web) ──
+        const negro = [35, 40, 50];
+        const azOsc = [13, 36, 98];        // #0d2462 - títulos y textos fuertes
+        const azMed = [25, 118, 210];      // #1976d2 - azul principal del sitio
+        const azPri = [30, 136, 229];      // #1e88e5 - azul de cabeceras / botones
+        const azClaro = [227, 240, 255];   // #e3f0ff - fondos suaves
+        const azBorde = [179, 214, 250];   // #b3d6fa - bordes suaves
+        const grisClaro = [246, 249, 253]; // fondo de tarjetas
+        const gris = [100, 106, 122];
+        const ambarBg = [255, 248, 225];   // #fff8e1 - nota de aviso (igual que la web)
+        const ambarBorde = [255, 193, 7];  // #ffc107
+        const ambarTxt = [122, 85, 0];     // #7a5500
+        const blanco = [255, 255, 255];
+
+        const M = 20;
+        const cardX = M, cardY = M;
+        const cardW = PW - 2 * M, cardH = PH - 2 * M;
+        const IP = 14;
+        const RADIO = 12; // radio del marco exterior (poco pronunciado)
+
+        // ── Marco exterior redondeado ──
+        doc.setFillColor(...blanco);
+        doc.setDrawColor(...azOsc);
+        doc.setLineWidth(1.3);
+        doc.roundedRect(cardX, cardY, cardW, cardH, RADIO, RADIO, 'FD');
+
+        // ── Cabecera ──
+        const logoSize = 55;
+        const logoX = cardX + IP, logoY = cardY + IP;
+
+        // ---- Caja ID redondeada ----
+        const idBoxW = 145, idBoxH = 65;
+        const idBoxX = cardX + cardW - IP - idBoxW, idBoxY = cardY + IP;
+
+        const uniX = logoX + logoSize + 8;
+        const uniW = idBoxX - 8 - uniX;
+        const uniCenter = uniX + uniW / 2;
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11.2);
+        doc.setTextColor(...azOsc);
+        doc.text('UNIVERSIDAD NACIONAL DEL ALTIPLANO', uniCenter, logoY + 9, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.2);
+        doc.setTextColor(...gris);
+        doc.text('ESCUELA DE CIENCIAS FISICO MATEMATICAS', uniCenter, logoY + 18, { align: 'center' });
+        doc.setFont('helvetica', 'bolditalic');
+        doc.setFontSize(13.5);
+        doc.setTextColor(...azMed);
+        doc.text('LABORATORIO DE FISICA', uniCenter, logoY + 36, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+
+        // Rectángulo redondeado nativo de jsPDF
+        doc.setFillColor(...azClaro);
+        doc.setDrawColor(...azMed);
+        doc.setLineWidth(1);
+        doc.roundedRect(idBoxX, idBoxY, idBoxW, idBoxH, 8, 8, 'FD');
+
+        // Texto centrado verticalmente con fracciones de altura
+        const idVal = String(respuestaServidor.idMatricula || '-');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...negro);
+        const idLbl = 'ID: ';
+        const idLblW = doc.getTextWidth(idLbl);
+        doc.setFont('helvetica', 'bolditalic');
+        doc.setFontSize(12);
+        const idValW = doc.getTextWidth(idVal);
+        const idStartX = idBoxX + idBoxW / 2 - (idLblW + idValW) / 2;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.2);
+        doc.setTextColor(...negro);
+        doc.text(idLbl, idStartX, idBoxY + idBoxH * 0.28);
+        doc.setFont('helvetica', 'bolditalic');
+        doc.setFontSize(10);
+        doc.setTextColor(...azOsc);
+        doc.text(idVal, idStartX + idLblW, idBoxY + idBoxH * 0.28);
+
+        doc.setDrawColor(...azBorde);
+        doc.setLineWidth(0.7);
+        doc.line(idBoxX + 14, idBoxY + idBoxH * 0.42, idBoxX + idBoxW - 14, idBoxY + idBoxH * 0.42);
+
+        doc.setFont('helvetica', 'bolditalic');
+        doc.setFontSize(8.2);
+        doc.setTextColor(...azMed);
+        doc.text('FICHA DE PRE-INSCRIPCION', idBoxX + idBoxW / 2, idBoxY + idBoxH * 0.60, { align: 'center' });
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.2);
+        const labLbl = 'LABORATORIO: ';
+        const labVal = String(datosMatricula.laboratorio || '-');
+        const labLblW = doc.getTextWidth(labLbl);
+        const labValW = doc.getTextWidth(labVal);
+        const labStartX = idBoxX + idBoxW / 2 - (labLblW + labValW) / 2;
+        doc.setTextColor(...negro);
+        doc.text(labLbl, labStartX, idBoxY + idBoxH * 0.82);
+        doc.setTextColor(...azOsc);
+        doc.text(labVal, labStartX + labLblW, idBoxY + idBoxH * 0.82);
+
+        const headerBottom = cardY + IP + Math.max(logoSize, idBoxH);
+
+        // ── Línea divisoria suave bajo la cabecera ──
+        doc.setDrawColor(...azBorde);
+        doc.setLineWidth(1);
+        doc.line(cardX + IP, headerBottom + 10, cardX + cardW - IP, headerBottom + 10);
+
+        // ── Tarjeta: Datos del estudiante ──
+        const infoCardY = headerBottom + 14;
+        const infoCardH = 52;
+        doc.setFillColor(...grisClaro);
+        doc.setDrawColor(...azBorde);
+        doc.setLineWidth(0.8);
+        doc.roundedRect(cardX + IP, infoCardY, cardW - 2 * IP, infoCardH, 8, 8, 'FD');
+
+        let y1 = infoCardY + 20;
+        const leftX = cardX + IP + 12;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.4);
+        doc.setTextColor(...gris);
+        doc.text('ESTUDIANTE', leftX, infoCardY + 14);
+
+        const nombreCompleto = (String(datosMatricula.nombre || '').trim() + ' ' +
+            String(datosMatricula.apellidos || '').trim()).trim().toUpperCase();
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12.5);
+        doc.setTextColor(...azOsc);
+        doc.text(nombreCompleto || '-', leftX, y1 + 4);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.6);
+        doc.setTextColor(...negro);
+        const codLbl = 'Codigo: ';
+        doc.text(codLbl, leftX, y1 + 20);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...azMed);
+        doc.text(String(datosMatricula.codigo || '-'), leftX + doc.getTextWidth(codLbl), y1 + 20);
+
+        // Separador vertical suave dentro de la tarjeta
+        const dividerX = cardX + cardW * 0.62;
+        doc.setDrawColor(...azBorde);
+        doc.setLineWidth(0.8);
+        doc.line(dividerX, infoCardY + 10, dividerX, infoCardY + infoCardH - 10);
+
+        // Columna derecha: fecha / celular / correo
+        const rightColX = dividerX + 16;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.4);
+
+        function filaEtiquetaValor(lbl, val, yy) {
+            doc.setTextColor(...gris);
+            doc.text(lbl, rightColX, yy);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...azOsc);
+            doc.text(String(val || '-'), rightColX + doc.getTextWidth(lbl) + 3, yy);
+            doc.setFont('helvetica', 'normal');
+        }
+        filaEtiquetaValor('Fecha de registro:  ', respuestaServidor.timestamp || '-', infoCardY + 20);
+        filaEtiquetaValor('Celular:  ', datosMatricula.celular, infoCardY + 32);
+        filaEtiquetaValor('Correo:  ', datosMatricula.email, infoCardY + 44);
+
+        // ── Tabla: Laboratorio | Docente Teoria | Escuela profesional ──
+        let yTab = infoCardY + infoCardH + 12;
+        const tW = cardW - 2 * IP;
+        const c1W = tW * 0.20, c2W = tW * 0.42, c3W = tW * 0.38;
+        const c1X = cardX + IP, c2X = c1X + c1W, c3X = c2X + c2W;
+        const headH = 15;
+
+        // Cabecera de tabla (píldora redondeada, azul del sitio)
+        doc.setFillColor(...azPri);
+        doc.roundedRect(c1X, yTab, tW, headH, 7, 7, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.2);
+        doc.setTextColor(...blanco);
+        doc.text('LABORATORIO', c1X + c1W / 2, yTab + headH / 2 + 2.5, { align: 'center' });
+        doc.text('DOCENTE DE TEORIA', c2X + c2W / 2, yTab + headH / 2 + 2.5, { align: 'center' });
+        doc.text('ESCUELA PROFESIONAL', c3X + c3W / 2, yTab + headH / 2 + 2.5, { align: 'center' });
+
+        function textoAjustado(txt, w, size) {
+            doc.setFontSize(size);
+            return doc.splitTextToSize(String(txt || '-'), w - 8);
+        }
+        const valSize = 7.4;
+        const lab1 = textoAjustado(datosMatricula.laboratorio, c1W, valSize);
+        const doc1 = textoAjustado(datosMatricula.docente, c2W, valSize);
+        const esc1 = textoAjustado(datosMatricula.escuela, c3W, valSize);
+        const lineH = 8.6;
+        const maxLineas = Math.max(lab1.length, doc1.length, esc1.length, 1);
+        const valH = Math.max(24, maxLineas * lineH + 10);
+        const bodyY = yTab + headH + 3;
+
+        // Cuerpo de tabla (píldora redondeada, fondo suave)
+        doc.setFillColor(...grisClaro);
+        doc.setDrawColor(...azBorde);
+        doc.setLineWidth(0.7);
+        doc.roundedRect(c1X, bodyY, tW, valH, 7, 7, 'FD');
+        // Divisores verticales internos, discretos
+        doc.setDrawColor(...azBorde);
+        doc.setLineWidth(0.6);
+        doc.line(c2X, bodyY + 5, c2X, bodyY + valH - 5);
+        doc.line(c3X, bodyY + 5, c3X, bodyY + valH - 5);
+
+        doc.setTextColor(...azMed);
+        doc.setFont('helvetica', 'bolditalic');
+        doc.setFontSize(valSize);
+        lab1.forEach(function(ln, i) { doc.text(ln, c1X + c1W / 2, bodyY + 14 + i * lineH, { align: 'center' }); });
+        doc.setTextColor(...azOsc);
+        doc.setFont('helvetica', 'bold');
+        doc1.forEach(function(ln, i) { doc.text(ln, c2X + c2W / 2, bodyY + 14 + i * lineH, { align: 'center' }); });
+        esc1.forEach(function(ln, i) { doc.text(ln, c3X + c3W / 2, bodyY + 14 + i * lineH, { align: 'center' }); });
+
+        const tablaBottom = bodyY + valH;
+
+        // ── QR (tarjeta izquierda) + nota informativa (tarjeta derecha) ──
+        let ySec = tablaBottom + 12;
+        const qrColW = tW * 0.32;
+        const qrColX = cardX + IP;
+        const txtColX = qrColX + qrColW + 16;
+        const txtColW = cardX + cardW - IP - txtColX;
+
+        const qrSize = Math.min(qrColW - 16, 66);
+
+        // Estimar altura de la nota primero para dimensionar ambas tarjetas por igual
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.9);
+        const parrafo = 'Estimados estudiantes, el llenado de esta ficha corresponde UNICAMENTE a la ' +
+            'PRE-INSCRIPCION.\n\n' +
+            'Para quedar formal y correctamente inscritos es indispensable apersonarse de manera ' +
+            'presencial al laboratorio y cancelar S/ 6.00 (seis soles), destinados a las guias e insumos ' +
+            'de las practicas.\n\n' +
+            'Sin este paso presencial y el pago correspondiente, no podra ser considerado dentro del ' +
+            'registro oficial. Se agradece realizar este tramite dentro de los plazos establecidos.';
+        const parrafoLineas = doc.splitTextToSize(parrafo, txtColW - 20);
+        const notaAltoTxto = parrafoLineas.length * 8.2;
+
+        const seccionH = Math.max(qrSize + 34, notaAltoTxto + 26);
+
+        // Tarjeta QR (estilo azul suave, igual que la web)
+        doc.setFillColor(...azClaro);
+        doc.setDrawColor(...azMed);
+        doc.setLineWidth(0.8);
+        doc.roundedRect(qrColX, ySec, qrColW, seccionH, 10, 10, 'FD');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...azOsc);
+        doc.text('CODIGO QR', qrColX + qrColW / 2, ySec + 16, { align: 'center' });
+        const qrY = ySec + (seccionH - qrSize) / 2 + 6;
+
+        // Tarjeta nota informativa (estilo aviso ámbar, igual que la web)
+        doc.setFillColor(...ambarBg);
+        doc.setDrawColor(...ambarBorde);
+        doc.setLineWidth(0.8);
+        doc.roundedRect(txtColX, ySec, txtColW, seccionH, 10, 10, 'FD');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.9);
+        doc.setTextColor(...ambarTxt);
+        doc.text(parrafoLineas, txtColX + 12, ySec + 16);
+
+        const seccionBottom = ySec + seccionH;
+
+        // ── Footer: píldora azul con mensaje final ──
+        const footerY = seccionBottom + 8;
+        const footerH = 18;
+        doc.setFillColor(...azPri);
+        doc.roundedRect(cardX + IP, footerY, tW, footerH, 9, 9, 'F');
+        doc.setFont('helvetica', 'bolditalic');
+        doc.setFontSize(9.5);
+        doc.setTextColor(...blanco);
+        doc.text('¡GRACIAS POR SU INSCRIPCION!', cardX + IP + tW / 2, footerY + footerH / 2 + 3, { align: 'center' });
+
+        function finalizarPDF(qrDataUrl, logoDataUrl) {
+            if (logoDataUrl) {
+                try { doc.addImage(logoDataUrl, logoX, logoY, logoSize, logoSize); } catch (errLogo) { console.error('Logo embed error', errLogo); }
+            }
+            if (qrDataUrl) {
+                try { doc.addImage(qrDataUrl, 'PNG', qrColX + (qrColW - qrSize) / 2, qrY, qrSize, qrSize); } catch (errQr) { console.error('QR embed error', errQr); }
+            }
+            doc.save('Ficha_PreInscripcion_' + String(respuestaServidor.idMatricula || datosMatricula.codigo || '') + '.pdf');
+
+            const d = document.createElement('div');
+            d.className = 'alert alert-success';
+            d.textContent = 'PDF descargado correctamente.';
+            Object.assign(d.style, { position: 'fixed', top: '20px', right: '20px', zIndex: '9999', display: 'block' });
+            document.body.appendChild(d);
+            setTimeout(function() { if (document.body.contains(d)) document.body.removeChild(d); }, 3000);
+
+            btn.textContent = orig;
+            btn.disabled = false;
+        }
+
+        generarQrDataUrl(String(datosMatricula.codigo || respuestaServidor.idMatricula || ''), function(qrDataUrl) {
+            cargarLogoDataUrl(function(logoDataUrl) {
+                finalizarPDF(qrDataUrl, logoDataUrl);
+            });
+        });
+
+    } catch (e) {
+        console.error(e);
+        mostrarError('Error al generar el PDF.');
+        btn.textContent = orig;
+        btn.disabled = false;
+    }
+}
+
+function generarQrDataUrl(texto, callback) {
+    try {
+        const cont = document.getElementById('qrHiddenContainer');
+        cont.innerHTML = '';
+
+        new QRCode(cont, {
+            text: texto || 'SIN-CODIGO',
+            width: 200,
+            height: 200,
+            correctLevel: QRCode.CorrectLevel.M
+        });
+
+        setTimeout(function() {
+            let dataUrl = null;
+            const canvas = cont.querySelector('canvas');
+            const img = cont.querySelector('img');
+            if (canvas) {
+                dataUrl = canvas.toDataURL('image/png');
+            } else if (img && img.src) {
+                dataUrl = img.src;
+            }
+            callback(dataUrl);
+        }, 80);
+    } catch (e) {
+        console.error('generarQrDataUrl:', e);
+        callback(null);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  HELPERS UI
+// ══════════════════════════════════════════════════════════════════
+function volverAlFormulario() {
+    document.getElementById('success').style.display = 'none';
+    document.getElementById('formulario').style.display = 'block';
+    limpiarFormulario();
+}
+
+function limpiarFormulario() {
+    document.getElementById('matriculaForm').reset();
+    ocultarError();
+    document.getElementById('nombreCompletoAlert').classList.remove('visible');
+    ['codigo', 'email', 'celular', 'grupo', 'clave', 'repetirClave'].forEach(function(c) { setIcon(c, '', ''); });
+    Object.keys(timerVal).forEach(function(k) { clearTimeout(timerVal[k]); });
+    timerVal = {};
+    dup = { codigo: null, email: null, grupo: null, celular: null, nombre: null };
+    chkBtn();
+}
+
+function cerrarModal() { document.getElementById('confirmModal').classList.remove('activo'); }
+
+function mostrarError(m) { const a = document.getElementById('errorAlert');
+    a.textContent = m;
+    a.style.display = 'block';
+    a.scrollIntoView({ behavior: 'smooth' }); }
+
+function ocultarError() { document.getElementById('errorAlert').style.display = 'none'; }
+
+// ══════════════════════════════════════════════════════════════════
+//  EVENT LISTENERS
+// ══════════════════════════════════════════════════════════════════
+document.getElementById('celular').addEventListener('input', function(e) {
+    e.target.value = e.target.value.replace(/\D/g, '').substring(0, 9);
+    valCelular(e.target.value.trim());
+});
+document.getElementById('codigo').addEventListener('input', function(e) {
+    e.target.value = e.target.value.replace(/\D/g, '').substring(0, 6);
+    valCodigo(e.target.value.trim());
+});
+document.getElementById('email').addEventListener('input', function(e) { valEmail(e.target.value.trim()); });
+document.getElementById('grupo').addEventListener('change', function(e) { valGrupo(e.target.value.trim()); });
+document.getElementById('clave').addEventListener('input', valPassword);
+document.getElementById('repetirClave').addEventListener('input', valPassword);
+
+document.querySelectorAll('.pass-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const target = document.getElementById(btn.getAttribute('data-target'));
+        target.type = target.type === 'password' ? 'text' : 'password';
+        btn.textContent = target.type === 'password' ? '👁️' : '🙈';
+    });
+});
+
+['apellidos', 'nombre'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', function(e) {
+        const p = e.target.selectionStart;
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ' .-]/g, '');
+        e.target.setSelectionRange(p, p);
+        window._verificarNombreInternal(
+            document.getElementById('apellidos').value.trim(),
+            document.getElementById('nombre').value.trim()
+        );
+        chkBtn();
+    });
+});
+
+document.getElementById('matriculaForm').addEventListener('change', chkBtn);
+document.getElementById('matriculaForm').addEventListener('input', chkBtn);
+window.addEventListener('click', function(e) { if (e.target === document.getElementById('confirmModal')) cerrarModal(); });
+document.addEventListener('DOMContentLoaded', function() {
+    cargarGrupos();
+    cargarLaboratorios();
+    cargarEscuelas();
+    cargarDocentes();
+    chkBtn();
+});
+
+window.addEventListener('error', function(ev) {
+    console.error('Error inesperado:', ev.error || ev.message);
+    const loadingVisible = document.getElementById('loading').style.display === 'block';
+    if (loadingVisible) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('formulario').style.display = 'block';
+        mostrarError(
+            'Ocurrió un error inesperado procesando su matrícula. Verifique su código antes de reintentar; ' +
+            'si el problema persiste, contacte al laboratorio.');
+    }
+});
+
 </script>
 </body>
 </html>
