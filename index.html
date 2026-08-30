@@ -7,144 +7,211 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
+        :root {
+            --azul-900: #0b2447;
+            --azul-800: #10336b;
+            --azul-700: #14539a;
+            --azul-600: #1a6fc4;
+            --azul-500: #2e86de;
+            --azul-100: #e7f1fc;
+            --azul-050: #f3f8fe;
+            --verde-600: #2f9e5b;
+            --verde-700: #257f48;
+            --ambar-600: #c9860b;
+            --ambar-050: #fff8e8;
+            --rojo-600: #d64545;
+            --gris-900: #1f2430;
+            --gris-600: #5a6272;
+            --gris-300: #d8dde5;
+            --gris-100: #f4f6f9;
+            --blanco: #ffffff;
+            --radio-lg: 18px;
+            --radio-md: 12px;
+            --radio-sm: 8px;
+            --sombra-suave: 0 2px 10px rgba(11, 36, 71, 0.06);
+            --sombra-media: 0 12px 30px rgba(11, 36, 71, 0.14);
+            --sombra-fuerte: 0 24px 60px rgba(11, 36, 71, 0.22);
+            --transicion: 180ms cubic-bezier(.4,0,.2,1);
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #051045 0%, #051045 100%);
-            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+            background:
+                radial-gradient(1100px 600px at 15% -10%, rgba(46,134,222,0.35), transparent 60%),
+                radial-gradient(900px 500px at 110% 10%, rgba(20,83,154,0.35), transparent 55%),
+                linear-gradient(160deg, var(--azul-900) 0%, #071a33 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
         }
         .container {
-            background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden; width: 100%; max-width: 600px; animation: slideIn 0.6s ease-out;
+            background: var(--blanco); border-radius: var(--radio-lg); box-shadow: var(--sombra-fuerte);
+            overflow: hidden; width: 100%; max-width: 620px; animation: slideIn 0.55s cubic-bezier(.16,1,.3,1);
         }
-        @keyframes slideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideIn { from { transform: translateY(-24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) {
+            .container { animation: none; }
+            * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+        }
         .header {
-            background: linear-gradient(135deg, #1e88e5 0%, #1976d2 100%);
-            color: white; padding: 30px; text-align: center;
+            background: linear-gradient(135deg, var(--azul-700) 0%, var(--azul-900) 100%);
+            color: var(--blanco); padding: 34px 30px 28px; text-align: center; position: relative;
         }
-        .header h1 { font-size: 2.2em; margin-bottom: 10px; font-weight: 700; }
-        .header h2 { font-size: 1.1em; opacity: 0.9; margin-bottom: 10px; }
-        .form-container { padding: 40px; }
-        .form-grid { display: grid; grid-template-columns: 1fr; gap: 25px; margin-bottom: 30px; }
+        .header::after {
+            content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+            background: linear-gradient(90deg, var(--verde-600), var(--azul-500) 50%, var(--ambar-600));
+        }
+        .header h1 { font-size: 1.85em; margin-bottom: 6px; font-weight: 700; letter-spacing: 0.2px; }
+        .header h2 { font-size: 1em; opacity: 0.88; margin-bottom: 14px; font-weight: 500; }
+        .header img { filter: drop-shadow(0 4px 10px rgba(0,0,0,0.25)); }
+        .form-container { padding: 38px 40px 40px; }
+        .form-grid { display: grid; grid-template-columns: 1fr; gap: 22px; margin-bottom: 28px; }
         .form-group { position: relative; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 0.95em; }
+        .form-group label { display: block; margin-bottom: 7px; font-weight: 600; color: var(--gris-900); font-size: 0.92em; letter-spacing: 0.1px; }
         .form-group input, .form-group select {
-            width: 100%; padding: 15px; border: 2px solid #e0e0e0; border-radius: 12px;
-            font-size: 16px; transition: all 0.3s ease; background: #f8f9fa;
+            width: 100%; padding: 13px 14px; border: 1.5px solid var(--gris-300); border-radius: var(--radio-md);
+            font-size: 15px; font-family: inherit; color: var(--gris-900);
+            transition: border-color var(--transicion), box-shadow var(--transicion), background var(--transicion);
+            background: var(--gris-100);
         }
+        .form-group select { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235a6272' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 14px center; background-size: 16px; padding-right: 40px; }
         .form-group input:focus, .form-group select:focus {
-            outline: none; border-color: #1e88e5; background: white;
-            box-shadow: 0 0 0 3px rgba(30,136,229,0.1); transform: translateY(-2px);
+            outline: none; border-color: var(--azul-500); background: var(--blanco);
+            box-shadow: 0 0 0 4px rgba(46,134,222,0.14);
         }
+        .form-group input::placeholder { color: #9aa2b1; }
         .form-group.full-width { grid-column: 1 / -1; }
-        .required::after { content: " *"; color: #e74c3c; font-weight: bold; }
-        .button-container { display: flex; gap: 20px; justify-content: center; margin-top: 30px; flex-wrap: wrap; }
+        .required::after { content: " *"; color: var(--rojo-600); font-weight: bold; }
+        .button-container { display: flex; gap: 16px; justify-content: center; margin-top: 28px; flex-wrap: wrap; }
         .btn {
-            padding: 15px 30px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
-            cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center;
-            justify-content: center; gap: 10px; min-width: 150px;
+            padding: 14px 28px; border: none; border-radius: var(--radio-md); font-size: 15px; font-weight: 700;
+            cursor: pointer; transition: transform var(--transicion), box-shadow var(--transicion), filter var(--transicion);
+            display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-width: 150px;
+            letter-spacing: 0.15px;
         }
-        .btn-primary { background: linear-gradient(135deg, #1e88e5, #1976d2); color: white; }
-        .btn-secondary { background: linear-gradient(135deg, #666, #555); color: white; }
-        .btn-success { background: linear-gradient(135deg, #4caf50, #45a049); color: white; }
-        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(30,136,229,0.3); }
-        .btn-secondary:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(102,102,102,0.3); }
-        .btn-success:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(76,175,80,0.3); }
-        .btn:disabled { background: #ccc !important; color: #666 !important; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
-        .loading { display: none; text-align: center; padding: 40px; }
+        .btn-primary { background: linear-gradient(135deg, var(--azul-600), var(--azul-700)); color: var(--blanco); box-shadow: 0 6px 16px rgba(26,111,196,0.28); }
+        .btn-secondary { background: var(--gris-100); color: var(--gris-900); border: 1.5px solid var(--gris-300); }
+        .btn-success { background: linear-gradient(135deg, var(--verde-600), var(--verde-700)); color: var(--blanco); box-shadow: 0 6px 16px rgba(47,158,91,0.28); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(26,111,196,0.35); }
+        .btn-secondary:hover { transform: translateY(-2px); background: var(--gris-300); }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(47,158,91,0.35); }
+        .btn:active { transform: translateY(0); }
+        .btn:focus-visible { outline: 3px solid rgba(46,134,222,0.5); outline-offset: 2px; }
+        .btn:disabled { background: var(--gris-300) !important; color: #8a92a0 !important; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+        .loading { display: none; text-align: center; padding: 50px 30px; }
         .loading-spinner {
-            width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #1e88e5;
-            border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;
+            width: 42px; height: 42px; border: 4px solid var(--gris-100); border-top: 4px solid var(--azul-500);
+            border-radius: 50%; animation: spin 0.9s linear infinite; margin: 0 auto 18px;
         }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .alert { padding: 15px; border-radius: 12px; margin-bottom: 20px; font-weight: 500; display: none; }
-        .alert-success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
-        .alert-error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-        .success-container { display: none; text-align: center; padding: 40px; }
-        .success-icon { font-size: 4em; color: #4caf50; margin-bottom: 20px; }
+        .loading p { color: var(--gris-600); font-weight: 600; }
+        .alert { padding: 14px 16px; border-radius: var(--radio-md); margin-bottom: 20px; font-weight: 600; font-size: 0.92em; display: none; }
+        .alert-success { background: #e7f8ee; border: 1.5px solid #a9e0bd; color: #1e6b3d; }
+        .alert-error { background: #fdeaea; border: 1.5px solid #f3b8b8; color: #9c2b2b; }
+        .success-container { display: none; text-align: center; padding: 46px 34px; }
+        .success-icon {
+            width: 76px; height: 76px; margin: 0 auto 18px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--verde-600), var(--verde-700)); color: var(--blanco);
+            display: flex; align-items: center; justify-content: center; font-size: 2.2em;
+            box-shadow: 0 10px 24px rgba(47,158,91,0.32);
+        }
+        .success-container h2 { color: var(--gris-900); margin-bottom: 6px; }
+        .success-container p { color: var(--gris-600); }
         .matricula-id {
-            font-size: 2em; font-weight: bold; color: #1e88e5; margin: 20px 0;
-            padding: 20px; background: #e3f2fd; border-radius: 12px; border: 2px solid #1e88e5;
+            font-size: 1.7em; font-weight: 800; color: var(--azul-700); margin: 22px 0;
+            padding: 18px; background: var(--azul-050); border-radius: var(--radio-md); border: 1.5px solid var(--azul-100);
+            letter-spacing: 0.3px;
         }
         .modal {
             display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); align-items: center;
+            background: rgba(7,26,51,0.55); backdrop-filter: blur(6px); align-items: center;
             justify-content: center; overflow-y: auto; padding: 20px;
         }
         .modal.activo { display: flex; }
         .modal-content {
-            background: white; border-radius: 20px; width: 100%; max-width: 500px;
-            animation: modalSlideIn 0.3s ease-out; max-height: 90vh; overflow-y: auto;
-            padding: 30px; margin: auto;
+            background: var(--blanco); border-radius: var(--radio-lg); width: 100%; max-width: 480px;
+            animation: modalSlideIn 0.25s cubic-bezier(.16,1,.3,1); max-height: 90vh; overflow-y: auto;
+            padding: 30px; margin: auto; box-shadow: var(--sombra-fuerte);
         }
-        @keyframes modalSlideIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .modal h2 { color: #1e88e5; margin-bottom: 20px; }
+        @keyframes modalSlideIn { from { transform: scale(0.92) translateY(8px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        .modal h2 { color: var(--azul-800); margin-bottom: 6px; }
+        .modal p { color: var(--gris-600); }
         .modal-buttons {
-            display: flex; gap: 15px; justify-content: center; margin-top: 25px;
-            position: sticky; bottom: 0; background: white; padding: 15px 0 5px;
+            display: flex; gap: 14px; justify-content: center; margin-top: 22px;
+            position: sticky; bottom: 0; background: var(--blanco); padding: 15px 0 5px;
         }
-        .input-error { border-color: #e74c3c !important; background: #fdebeb !important; }
-        .input-validating { border-color: #f39c12 !important; background: #fef9e7 !important; }
-        .input-valid { border-color: #27ae60 !important; background: #eafaf1 !important; }
-        .input-warning { border-color: #f39c12 !important; background: #fff8e1 !important; }
+        .input-error { border-color: var(--rojo-600) !important; background: #fdf1f1 !important; }
+        .input-validating { border-color: var(--ambar-600) !important; background: var(--ambar-050) !important; }
+        .input-valid { border-color: var(--verde-600) !important; background: #f0faf3 !important; }
+        .input-warning { border-color: var(--ambar-600) !important; background: var(--ambar-050) !important; }
         .validation-icon {
-            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
-            font-size: 18px; pointer-events: none;
+            position: absolute; right: 13px; top: 42px; transform: none;
+            font-size: 16px; pointer-events: none;
         }
-        .validation-message { font-size: 12px; margin-top: 5px; font-weight: 500; }
-        .validation-error { color: #e74c3c; }
-        .validation-success { color: #27ae60; }
-        .validation-checking { color: #f39c12; }
-        .validation-warning { color: #b8860b; }
+        .validation-message { font-size: 12.5px; margin-top: 6px; font-weight: 600; }
+        .validation-error { color: var(--rojo-600); }
+        .validation-success { color: var(--verde-700); }
+        .validation-checking { color: var(--ambar-600); }
+        .validation-warning { color: var(--ambar-600); }
         .alerta-duplicado-nombre {
-            display: none; background: #fff3e0; border: 1.5px solid #ff9800; color: #7a4100;
-            border-radius: 10px; padding: 12px 16px; font-size: 13px; font-weight: 600;
-            margin-top: 6px; grid-column: 1 / -1;
+            display: none; background: var(--ambar-050); border: 1.5px solid var(--ambar-600); color: #6b4a00;
+            border-radius: var(--radio-sm); padding: 12px 16px; font-size: 13px; font-weight: 600;
+            margin-top: 4px; grid-column: 1 / -1;
         }
         .alerta-duplicado-nombre.visible { display: block; }
-        @media(max-width:768px) { .button-container, .modal-buttons { flex-direction: column; align-items: center; } .btn { width: 100%; max-width: 300px; } }
-        #instrucciones { padding: 36px 40px 40px; }
+        @media(max-width:768px) {
+            .button-container, .modal-buttons { flex-direction: column; align-items: stretch; }
+            .btn { width: 100%; max-width: none; }
+            .form-container { padding: 30px 22px 32px; }
+            #instrucciones { padding: 28px 22px 32px; }
+        }
+        #instrucciones { padding: 34px 40px 40px; }
         .instr-titulo {
-            text-align: center; font-size: 1.3em; font-weight: 700; color: #1e88e5;
-            margin-bottom: 22px; display: flex; align-items: center; justify-content: center; gap: 10px;
+            text-align: center; font-size: 1.25em; font-weight: 700; color: var(--azul-800);
+            margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;
         }
         .instr-box {
-            background: #f0f7ff; border: 2px solid #1e88e5; border-radius: 14px;
-            padding: 24px 28px; margin-bottom: 22px;
+            background: var(--azul-050); border: 1.5px solid var(--azul-100); border-radius: var(--radio-md);
+            padding: 22px 24px; margin-bottom: 20px;
         }
-        .instr-box p { font-size: 0.97em; color: #1a2a4a; line-height: 1.85; margin: 0; }
-        .instr-box .instr-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+        .instr-box p { font-size: 0.97em; color: var(--gris-900); line-height: 1.8; margin: 0; }
+        .instr-box .instr-item { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
         .instr-box .instr-item:last-child { margin-bottom: 0; }
+        .instr-box .instr-item div:last-child { color: var(--gris-900); line-height: 1.6; font-size: 0.95em; }
         .instr-num {
-            background: #1e88e5; color: white; border-radius: 50%; width: 26px; height: 26px;
-            min-width: 26px; display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 0.85em; margin-top: 1px;
+            background: var(--azul-600); color: var(--blanco); border-radius: 50%; width: 25px; height: 25px;
+            min-width: 25px; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.82em; margin-top: 1px;
         }
         .instr-nota {
-            background: #fff8e1; border: 1.5px solid #ffc107; border-radius: 10px;
-            padding: 12px 18px; font-size: 0.88em; color: #7a5500; font-weight: 600;
-            margin-bottom: 26px; display: flex; gap: 8px; align-items: flex-start;
+            background: var(--ambar-050); border: 1.5px solid var(--ambar-600); border-radius: var(--radio-sm);
+            padding: 12px 18px; font-size: 0.87em; color: #6b4a00; font-weight: 600;
+            margin-bottom: 24px; display: flex; gap: 8px; align-items: flex-start;
         }
         .btn-horario {
             display: block; width: 100%; padding: 14px;
-            background: linear-gradient(135deg, #43a047, #388e3c); color: white;
-            border: none; border-radius: 12px; font-size: 1em; font-weight: 700; cursor: pointer;
-            text-align: center; text-decoration: none; margin-bottom: 14px; transition: all 0.3s;
+            background: linear-gradient(135deg, var(--verde-600), var(--verde-700)); color: var(--blanco);
+            border: none; border-radius: var(--radio-md); font-size: 1em; font-weight: 700; cursor: pointer;
+            text-align: center; text-decoration: none; margin-bottom: 14px; transition: transform var(--transicion), box-shadow var(--transicion);
+            box-shadow: 0 6px 16px rgba(47,158,91,0.26);
         }
-        .btn-horario:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(56,142,60,0.35); }
+        .btn-horario:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(47,158,91,0.34); }
         .btn-siguiente {
-            display: block; width: 100%; padding: 16px;
-            background: linear-gradient(135deg, #1e88e5, #1976d2); color: white;
-            border: none; border-radius: 12px; font-size: 1.05em; font-weight: 700;
-            cursor: pointer; transition: all 0.3s;
+            display: block; width: 100%; padding: 15px;
+            background: linear-gradient(135deg, var(--azul-600), var(--azul-800)); color: var(--blanco);
+            border: none; border-radius: var(--radio-md); font-size: 1.02em; font-weight: 700;
+            cursor: pointer; transition: transform var(--transicion), box-shadow var(--transicion);
+            box-shadow: 0 6px 16px rgba(26,111,196,0.28);
         }
-        .btn-siguiente:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(30,136,229,0.35); }
+        .btn-siguiente:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(26,111,196,0.36); }
         .btn-siguiente, .btn-horario { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        .btn-siguiente:focus-visible, .btn-horario:focus-visible { outline: 3px solid rgba(46,134,222,0.5); outline-offset: 2px; }
         .pass-wrap { position: relative; }
         .pass-toggle {
-            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
-            cursor: pointer; font-size: 16px; user-select: none; background: none; border: none;
+            position: absolute; right: 13px; top: 12px;
+            cursor: pointer; font-size: 15px; user-select: none; background: none; border: none; padding: 4px;
+            border-radius: 6px; transition: background var(--transicion);
         }
+        .pass-toggle:hover { background: var(--gris-100); }
     </style>
 </head>
 <body>
@@ -172,9 +239,9 @@
            target="_blank" class="btn-horario">📅 Ver Horarios Disponibles</a>
         <button type="button" id="btnSiguiente" class="btn-siguiente" onclick="mostrarFormulario()">Siguiente — Ir al Formulario de Matrícula &nbsp;→</button>
         <div style="text-align:center; margin-top:18px;">
-            <a href="https://script.google.com/a/macros/unap.edu.pe/s/AKfycbw5YMMvSolpiCYuLQePTv-yvm9uGS04dbg2RoXBGsyg/dev"
+            <a href="https://script.google.com/macros/s/AKfycbwFEti0UyDROtSBhUcpdDc0HWoLU7niQqbR9rx7mhiVU3HRu1UK_UI7hoJDp0MaHiZp/exec"
                target="_blank" rel="noopener"
-               style="color:#1e88e5; font-size:0.9em; font-weight:600; text-decoration:underline;">
+               style="color:var(--azul-600); font-size:0.9em; font-weight:600; text-decoration:underline;">
                 ¿Ya te matriculaste y no pudiste descargar tu comprobante? Recupéralo aquí
             </a>
         </div>
@@ -234,18 +301,9 @@
 // ══════════════════════════════════════════════════════════════════
 //  CONFIGURACIÓN DEL PUENTE CON EL BACKEND
 // ══════════════════════════════════════════════════════════════════
-//  Este HTML puede ejecutarse en dos contextos distintos:
-//   a) Servido directamente por Apps Script (doGet) → existe
-//      `google.script.run` y se usa tal cual (más rápido, sin red aparte).
-//   b) Alojado como archivo estático (ej. GitHub Pages) → NO existe
-//      `google.script.run`, así que se llama por HTTP (fetch) a la
-//      URL de despliegue del Web App (termina en /exec).
-//
-//  ⚠️ ACCIÓN REQUERIDA: reemplaza el valor de abajo por la URL real de
-//  tu despliegue de Apps Script ("Implementar" → "Nueva implementación"
-//  → "Aplicación web" → copiar la URL que termina en /exec).
-//  Si esta página se abre siempre dentro de Apps Script (nunca como
-//  archivo suelto en GitHub Pages), puedes dejarlo así, no se usará.
+// AQUI DEBES PEGAR LA URL DE TU PROPIO GOOGLE APPS SCRIPT DESPLEGADO
+// COMO "APLICACION WEB" (Web App). Ver instrucciones detalladas al
+// final de la respuesta sobre cómo obtenerla y qué debe contener.
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwFEti0UyDROtSBhUcpdDc0HWoLU7niQqbR9rx7mhiVU3HRu1UK_UI7hoJDp0MaHiZp/exec';
 
 function escapeHtml(str) {
@@ -254,12 +312,8 @@ function escapeHtml(str) {
     });
 }
 
-// ¿Estamos dentro del iframe sandbox que Apps Script inyecta al servir
-// el HTML con HtmlService? Solo ahí existe `google.script.run`.
 const usandoIframeGAS = () => typeof google !== 'undefined' && google.script && google.script.run;
 
-// Puente único hacia el backend. onSuccess/onError reciben el mismo
-// resultado que antes recibían withSuccessHandler/withFailureHandler.
 function llamarAPI(accion, args, onSuccess, onError) {
     args = args || [];
 
@@ -274,8 +328,6 @@ function llamarAPI(accion, args, onSuccess, onError) {
         return;
     }
 
-    // Content-Type: text/plain a propósito: evita el preflight CORS de
-    // OPTIONS, que Apps Script no puede responder.
     fetch(WEBAPP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -289,34 +341,60 @@ function llamarAPI(accion, args, onSuccess, onError) {
         .catch(onError);
 }
 
-// ─── Mostrar formulario desde instrucciones ──────────────────────────────────
+let _cambiandoAFormulario = false;
+
 function mostrarFormulario() {
+    if (_cambiandoAFormulario) return;
+    _cambiandoAFormulario = true;
+
     try {
         const instr = document.getElementById('instrucciones');
         const form  = document.getElementById('formulario');
+        const btn   = document.getElementById('btnSiguiente');
+
+        if (btn) btn.disabled = true;
         if (instr) instr.style.display = 'none';
         if (form) form.style.display = 'block';
-        // En celulares, al ocultar las instrucciones (que son largas), el
-        // navegador mantiene el scroll donde estaba (abajo del todo). Sin
-        // este scrollTo, la pantalla queda en blanco y parece que el botón
-        // no hizo nada, aunque el formulario ya se mostró más arriba.
-        window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0; // Safari iOS
+
+        const resetScroll = function() {
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            if (btn) btn.disabled = false;
+            _cambiandoAFormulario = false;
+        };
+
+        resetScroll();
+
+        requestAnimationFrame(function() {
+            requestAnimationFrame(resetScroll);
+        });
+
+        setTimeout(resetScroll, 150);
+
     } catch (err) {
         console.error('mostrarFormulario:', err);
+        _cambiandoAFormulario = false;
+        const btn = document.getElementById('btnSiguiente');
+        if (btn) btn.disabled = false;
     }
 }
 
-// Respaldo por si el atributo onclick fallara por algún motivo (ej. una
-// extensión del navegador que bloquea atributos inline): se vuelve a
-// enganchar el mismo botón vía addEventListener, en click y en touchend,
-// una vez que el DOM está listo.
 document.addEventListener('DOMContentLoaded', function() {
     try {
         const btn = document.getElementById('btnSiguiente');
         if (btn) {
-            btn.addEventListener('click', mostrarFormulario);
+            let manejadoPorTouch = false;
+            btn.addEventListener('touchend', function(e) {
+                manejadoPorTouch = true;
+                e.preventDefault();
+                mostrarFormulario();
+                setTimeout(function() { manejadoPorTouch = false; }, 400);
+            }, { passive: false });
+            btn.addEventListener('click', function() {
+                if (manejadoPorTouch) return;
+                mostrarFormulario();
+            });
         }
     } catch (err) {
         console.error('Enganche de btnSiguiente:', err);
@@ -329,10 +407,6 @@ let timerVal = {};
 
 let dup = { codigo: null, email: null, grupo: null, celular: null, nombre: null };
 
-// ══════════════════════════════════════════════════════════════════
-//  Carga de combos: Grupo / Laboratorio / Escuela / Docente
-//  Todos se leen en vivo desde la hoja "Grupos" vía llamarAPI().
-// ══════════════════════════════════════════════════════════════════
 function cargarGrupos() {
     llamarAPI('obtenerGrupos', [], poblarGrupos, function() { poblarGrupos(null); });
 }
@@ -432,8 +506,8 @@ function chkBtn() {
     if (!btn) return;
     btn.disabled = !ok;
     btn.style.cssText = ok ?
-        'background:linear-gradient(135deg,#1e88e5,#1976d2);color:#fff;cursor:pointer' :
-        'background:#ccc;color:#666;cursor:not-allowed';
+        'background:linear-gradient(135deg,#1a6fc4,#14539a);color:#fff;cursor:pointer' :
+        'background:#d8dde5;color:#8a92a0;cursor:not-allowed';
     btn.textContent = ok ? 'Matricular' : 'Verificar datos';
 }
 
@@ -475,8 +549,6 @@ function setIcon(campo, estado, msg) {
     }
 }
 
-// Envoltorio con timeout de 8s para las verificaciones "en vivo" (código,
-// email, celular, grupo) mientras el usuario escribe.
 function llamarConTimeout_(campo, accion, args, onResult) {
     const sk = '_st_' + campo;
     if (window[sk]) clearTimeout(window[sk]);
@@ -572,14 +644,7 @@ function valCelular(v) {
     }, 600);
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  valGrupo — al seleccionar un grupo, consulta las vacantes reales
-//  (verificarGrupoLleno en Code.gs) y colorea el estado:
-//    🟢 verde   -> hay vacantes de sobra (menos del 80% ocupado)
-//    🟡 amarillo-> quedan pocas vacantes (80% de ocupación o más)
-//    🔴 rojo    -> el grupo ya está lleno (sin vacantes)
-// ══════════════════════════════════════════════════════════════════
-const UMBRAL_POR_LLENARSE = 0.8; // 80% de ocupación
+const UMBRAL_POR_LLENARSE = 0.8;
 
 function valGrupo(v) {
     if (!v) { setIcon('grupo', '');
@@ -750,9 +815,6 @@ function onExito(r) {
     }
 }
 
-// Si el envío falla por red/timeout, intentamos recuperar el registro
-// (puede que sí se haya guardado del lado del servidor aunque la
-// respuesta no haya llegado a tiempo).
 function onError() {
     document.getElementById('loading').style.display = 'none';
     const codigo = (datosMatricula && datosMatricula.codigo) || '';
@@ -800,12 +862,6 @@ function mostrarComprobanteRecuperado(r) {
     document.getElementById('success').style.display = 'block';
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  LOGO — se descarga una sola vez y se cachea en base64 para el PDF.
-//  Antes se usaba una URL de miniatura de Google (encrypted-tbn0...)
-//  que es temporal y puede dejar de funcionar sin aviso. Ahora se usa
-//  la misma URL estable de Wikimedia que ya se usa en la cabecera.
-// ══════════════════════════════════════════════════════════════════
 let logoDataUrlCache = null;
 const LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Logo_UNAP.png/500px-Logo_UNAP.png';
 
@@ -824,9 +880,6 @@ function cargarLogoDataUrl(callback) {
     } catch (e) { callback(null); }
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  PDF — Ficha de Pre-Inscripción tamaño A5 horizontal
-// ══════════════════════════════════════════════════════════════════
 function descargarPDF() {
     const btn = event.target;
     const orig = btn.textContent;
@@ -839,37 +892,33 @@ function descargarPDF() {
         const PW = doc.internal.pageSize.getWidth();
         const PH = doc.internal.pageSize.getHeight();
 
-        // ── Paleta (coherente con el sistema web) ──
         const negro = [35, 40, 50];
-        const azOsc = [13, 36, 98];        // #0d2462 - títulos y textos fuertes
-        const azMed = [25, 118, 210];      // #1976d2 - azul principal del sitio
-        const azPri = [30, 136, 229];      // #1e88e5 - azul de cabeceras / botones
-        const azClaro = [227, 240, 255];   // #e3f0ff - fondos suaves
-        const azBorde = [179, 214, 250];   // #b3d6fa - bordes suaves
-        const grisClaro = [246, 249, 253]; // fondo de tarjetas
+        const azOsc = [13, 36, 98];
+        const azMed = [25, 118, 210];
+        const azPri = [30, 136, 229];
+        const azClaro = [227, 240, 255];
+        const azBorde = [179, 214, 250];
+        const grisClaro = [246, 249, 253];
         const gris = [100, 106, 122];
-        const ambarBg = [255, 248, 225];   // #fff8e1 - nota de aviso (igual que la web)
-        const ambarBorde = [255, 193, 7];  // #ffc107
-        const ambarTxt = [122, 85, 0];     // #7a5500
+        const ambarBg = [255, 248, 225];
+        const ambarBorde = [255, 193, 7];
+        const ambarTxt = [122, 85, 0];
         const blanco = [255, 255, 255];
 
         const M = 20;
         const cardX = M, cardY = M;
         const cardW = PW - 2 * M, cardH = PH - 2 * M;
         const IP = 14;
-        const RADIO = 12; // radio del marco exterior (poco pronunciado)
+        const RADIO = 12;
 
-        // ── Marco exterior redondeado ──
         doc.setFillColor(...blanco);
         doc.setDrawColor(...azOsc);
         doc.setLineWidth(1.3);
         doc.roundedRect(cardX, cardY, cardW, cardH, RADIO, RADIO, 'FD');
 
-        // ── Cabecera ──
         const logoSize = 55;
         const logoX = cardX + IP, logoY = cardY + IP;
 
-        // ---- Caja ID redondeada ----
         const idBoxW = 145, idBoxH = 65;
         const idBoxX = cardX + cardW - IP - idBoxW, idBoxY = cardY + IP;
 
@@ -891,13 +940,11 @@ function descargarPDF() {
         doc.text('LABORATORIO DE FISICA', uniCenter, logoY + 36, { align: 'center' });
         doc.setFont('helvetica', 'normal');
 
-        // Rectángulo redondeado nativo de jsPDF
         doc.setFillColor(...azClaro);
         doc.setDrawColor(...azMed);
         doc.setLineWidth(1);
         doc.roundedRect(idBoxX, idBoxY, idBoxW, idBoxH, 8, 8, 'FD');
 
-        // Texto centrado verticalmente con fracciones de altura
         const idVal = String(respuestaServidor.idMatricula || '-');
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
@@ -940,12 +987,10 @@ function descargarPDF() {
 
         const headerBottom = cardY + IP + Math.max(logoSize, idBoxH);
 
-        // ── Línea divisoria suave bajo la cabecera ──
         doc.setDrawColor(...azBorde);
         doc.setLineWidth(1);
         doc.line(cardX + IP, headerBottom + 10, cardX + cardW - IP, headerBottom + 10);
 
-        // ── Tarjeta: Datos del estudiante ──
         const infoCardY = headerBottom + 14;
         const infoCardH = 52;
         doc.setFillColor(...grisClaro);
@@ -976,13 +1021,11 @@ function descargarPDF() {
         doc.setTextColor(...azMed);
         doc.text(String(datosMatricula.codigo || '-'), leftX + doc.getTextWidth(codLbl), y1 + 20);
 
-        // Separador vertical suave dentro de la tarjeta
         const dividerX = cardX + cardW * 0.62;
         doc.setDrawColor(...azBorde);
         doc.setLineWidth(0.8);
         doc.line(dividerX, infoCardY + 10, dividerX, infoCardY + infoCardH - 10);
 
-        // Columna derecha: fecha / celular / correo
         const rightColX = dividerX + 16;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.4);
@@ -999,14 +1042,12 @@ function descargarPDF() {
         filaEtiquetaValor('Celular:  ', datosMatricula.celular, infoCardY + 32);
         filaEtiquetaValor('Correo:  ', datosMatricula.email, infoCardY + 44);
 
-        // ── Tabla: Laboratorio | Docente Teoria | Escuela profesional ──
         let yTab = infoCardY + infoCardH + 12;
         const tW = cardW - 2 * IP;
         const c1W = tW * 0.20, c2W = tW * 0.42, c3W = tW * 0.38;
         const c1X = cardX + IP, c2X = c1X + c1W, c3X = c2X + c2W;
         const headH = 15;
 
-        // Cabecera de tabla (píldora redondeada, azul del sitio)
         doc.setFillColor(...azPri);
         doc.roundedRect(c1X, yTab, tW, headH, 7, 7, 'F');
         doc.setFont('helvetica', 'bold');
@@ -1029,12 +1070,10 @@ function descargarPDF() {
         const valH = Math.max(24, maxLineas * lineH + 10);
         const bodyY = yTab + headH + 3;
 
-        // Cuerpo de tabla (píldora redondeada, fondo suave)
         doc.setFillColor(...grisClaro);
         doc.setDrawColor(...azBorde);
         doc.setLineWidth(0.7);
         doc.roundedRect(c1X, bodyY, tW, valH, 7, 7, 'FD');
-        // Divisores verticales internos, discretos
         doc.setDrawColor(...azBorde);
         doc.setLineWidth(0.6);
         doc.line(c2X, bodyY + 5, c2X, bodyY + valH - 5);
@@ -1051,7 +1090,6 @@ function descargarPDF() {
 
         const tablaBottom = bodyY + valH;
 
-        // ── QR (tarjeta izquierda) + nota informativa (tarjeta derecha) ──
         let ySec = tablaBottom + 12;
         const qrColW = tW * 0.32;
         const qrColX = cardX + IP;
@@ -1060,7 +1098,6 @@ function descargarPDF() {
 
         const qrSize = Math.min(qrColW - 16, 66);
 
-        // Estimar altura de la nota primero para dimensionar ambas tarjetas por igual
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(6.9);
         const parrafo = 'Estimados estudiantes, el llenado de esta ficha corresponde UNICAMENTE a la ' +
@@ -1075,7 +1112,6 @@ function descargarPDF() {
 
         const seccionH = Math.max(qrSize + 34, notaAltoTxto + 26);
 
-        // Tarjeta QR (estilo azul suave, igual que la web)
         doc.setFillColor(...azClaro);
         doc.setDrawColor(...azMed);
         doc.setLineWidth(0.8);
@@ -1086,7 +1122,6 @@ function descargarPDF() {
         doc.text('CODIGO QR', qrColX + qrColW / 2, ySec + 16, { align: 'center' });
         const qrY = ySec + (seccionH - qrSize) / 2 + 6;
 
-        // Tarjeta nota informativa (estilo aviso ámbar, igual que la web)
         doc.setFillColor(...ambarBg);
         doc.setDrawColor(...ambarBorde);
         doc.setLineWidth(0.8);
@@ -1098,7 +1133,6 @@ function descargarPDF() {
 
         const seccionBottom = ySec + seccionH;
 
-        // ── Footer: píldora azul con mensaje final ──
         const footerY = seccionBottom + 8;
         const footerH = 18;
         doc.setFillColor(...azPri);
@@ -1171,9 +1205,6 @@ function generarQrDataUrl(texto, callback) {
     }
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  HELPERS UI
-// ══════════════════════════════════════════════════════════════════
 function volverAlFormulario() {
     document.getElementById('success').style.display = 'none';
     document.getElementById('formulario').style.display = 'block';
@@ -1200,13 +1231,6 @@ function mostrarError(m) { const a = document.getElementById('errorAlert');
 
 function ocultarError() { document.getElementById('errorAlert').style.display = 'none'; }
 
-// ══════════════════════════════════════════════════════════════════
-//  EVENT LISTENERS
-//  Cada enganche va en su propio try/catch: si uno falla (por ejemplo,
-//  por una versión de la página en caché que no coincide exactamente
-//  con este script), los demás igual se registran en vez de que un solo
-//  error detenga el resto de la inicialización.
-// ══════════════════════════════════════════════════════════════════
 function enganchar_(fn, nombre) {
     try { fn(); } catch (err) { console.error('Error al enganchar "' + nombre + '":', err); }
 }
@@ -1275,10 +1299,6 @@ enganchar_(function() {
     window.addEventListener('click', function(e) { if (e.target === document.getElementById('confirmModal')) cerrarModal(); });
 }, 'modal click-outside');
 
-// La carga de los combos (Grupo/Laboratorio/Escuela/Docente) va aparte y
-// SIEMPRE se ejecuta, sin depender de que los enganches de arriba hayan
-// funcionado, porque es la parte más importante para que el formulario
-// sea usable.
 enganchar_(function() {
     cargarGrupos();
     cargarLaboratorios();
