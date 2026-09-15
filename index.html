@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matrículas-LABORATORIO</title>
+    <title>Sistema de Matrícula - UNAP</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -217,7 +217,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>Sistema de Matriculas 2026-I</h1>
+        <h1>Sistema de Matriculas 2026-II</h1>
         <h2>Universidad Nacional del Altiplano</h2>
         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Logo_UNAP.png/500px-Logo_UNAP.png"
              style="width:140px;height:auto;margin-top:10px;">
@@ -232,9 +232,10 @@
             <div class="instr-item"><div class="instr-num">2</div><div>Consulta los <strong>horarios disponibles</strong> en el botón de abajo de color verde antes de registrarte en el formulario.</div></div>
 
             <div class="instr-item"><div class="instr-num">3</div><div>En el campo de correo electrónico, de preferencia usa <strong>correo institucional</strong> con dominio @est.unap.edu.pe. Si no posees uno, ¡usa cualquier correo!</div></div>
-             <div class="instr-item"><div class="instr-num">4</div><div>Crea una <strong>contraseña</strong> al matricularte: te servirá para identificar tu registro más adelante si necesitas hacer alguna consulta.</div></div>
+            <div class="instr-item"><div class="instr-num">4</div><div>Crea una <strong>contraseña</strong> al matricularte: te servirá para identificar tu registro más adelante si necesitas hacer alguna consulta.</div></div>
 
             <div class="instr-item"><div class="instr-num">5</div><div>En casilla <strong>Docente</strong> se refiere a docente de teoria de física de su escuela profecional.</div></div>
+
               <div class="instr-item"><div class="instr-num">6</div><div>Después de separar tu vacante, <strong>descargue y guarde e imprima la ficha la incripción</strong>  </div></div>
 
             <div class="instr-item"><div class="instr-num">7</div><div>A partir del <strong>lunes  21 de setiembre</strong>, se recepcionarán las  fichas de preinscripción impresas en las instalaciones de los laboratorio de Física en el pabellon de ciencias basicas para ingenierias. No es necesario  que cada estudiante se apersone al laboratorio; puede hacerlo el delegado o compañero(a) de  confianza  con la ficha de preinscripción mas los  S/6.00  para su guia de laboratorio.</div></div>
@@ -305,7 +306,10 @@
 <div id="qrHiddenContainer" style="position:absolute; left:-9999px; top:-9999px;"></div>
 
 <script>
-
+// ══════════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN DEL PUENTE CON EL BACKEND
+// ══════════════════════════════════════════════════════════════════
+// URL del Google Apps Script desplegado como "Aplicacion Web" (Web App).
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwFEti0UyDROtSBhUcpdDc0HWoLU7niQqbR9rx7mhiVU3HRu1UK_UI7hoJDp0MaHiZp/exec';
 
 function escapeHtml(str) {
