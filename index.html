@@ -566,7 +566,7 @@ function llamarConTimeout_(campo, accion, args, onResult) {
         dup[campo] = false;
         setIcon(campo, 'err', 'Sin respuesta del servidor. Intente de nuevo.');
         chkBtn();
-    }, 8000);
+    }, 18000);
 
     llamarAPI(accion, args,
         function(r) {
@@ -723,7 +723,7 @@ window._verificarNombreInternal = function(ap, nm) {
             if (alerta) { alerta.textContent = '⚠️ Sin respuesta del servidor. Intente de nuevo.';
                 alerta.classList.add('visible'); }
             chkBtn();
-        }, 8000);
+        }, 18000);
         llamarAPI('verificarDuplicado', ['nombreCompleto', ap + '||' + nm],
             function(r) { if (done) return;
                 done = true;
