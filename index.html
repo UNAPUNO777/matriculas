@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -158,6 +159,15 @@
             margin-top: 4px; grid-column: 1 / -1;
         }
         .alerta-duplicado-nombre.visible { display: block; }
+        .select-error-inline {
+            font-size: 12.5px; margin-top: 6px; font-weight: 600; color: var(--rojo-600);
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        }
+        .btn-reintentar {
+            border: 1.5px solid var(--rojo-600); background: var(--blanco); color: var(--rojo-600);
+            font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 7px; cursor: pointer;
+        }
+        .btn-reintentar:hover { background: #fdeaea; }
         @media(max-width:768px) {
             .button-container, .modal-buttons { flex-direction: column; align-items: stretch; }
             .btn { width: 100%; max-width: none; }
@@ -261,10 +271,10 @@
         <form id="matriculaForm" autocomplete="off">
             <div class="form-grid">
                 <div class="form-group"><label for="codigo" class="required">Código de Estudiante</label><div style="position:relative"><input type="text" id="codigo" name="codigo" required maxlength="6" minlength="6" placeholder="6 dígitos (Ej: 180545)" inputmode="numeric"><div class="validation-icon" id="codigoIcon"></div></div><div class="validation-message" id="codigoMessage"></div></div>
-                <div class="form-group"><label for="laboratorio" class="required">Laboratorio</label><select id="laboratorio" name="laboratorio" required><option value="">Cargando laboratorios...</option></select></div>
-                <div class="form-group"><label for="grupo" class="required">Grupo</label><select id="grupo" name="grupo" required><option value="">Cargando grupos...</option></select><div class="validation-message" id="grupoMessage"></div></div>
-                <div class="form-group"><label for="escuela" class="required">Escuela Profesional</label><select id="escuela" name="escuela" required><option value="">Cargando escuelas...</option></select></div>
-                <div class="form-group"><label for="docente" class="required">Docente de Teoría</label><select id="docente" name="docente" required><option value="">Cargando docentes...</option></select></div>
+                <div class="form-group"><label for="laboratorio" class="required">Laboratorio</label><select id="laboratorio" name="laboratorio" required><option value="">Cargando laboratorios...</option></select><div class="select-error-inline" id="laboratorioError"></div></div>
+                <div class="form-group"><label for="grupo" class="required">Grupo</label><select id="grupo" name="grupo" required><option value="">Cargando grupos...</option></select><div class="validation-message" id="grupoMessage"></div><div class="select-error-inline" id="grupoError"></div></div>
+                <div class="form-group"><label for="escuela" class="required">Escuela Profesional</label><select id="escuela" name="escuela" required><option value="">Cargando escuelas...</option></select><div class="select-error-inline" id="escuelaError"></div></div>
+                <div class="form-group"><label for="docente" class="required">Docente de Teoría</label><select id="docente" name="docente" required><option value="">Cargando docentes...</option></select><div class="select-error-inline" id="docenteError"></div></div>
                 <div class="form-group"><label for="apellidos" class="required">Apellidos</label><input type="text" id="apellidos" name="apellidos" required placeholder="Ingrese sus apellidos completos"></div>
                 <div class="form-group"><label for="nombre" class="required">Nombres</label><input type="text" id="nombre" name="nombre" required placeholder="Ingrese sus nombres completos"></div>
                 <div class="alerta-duplicado-nombre" id="nombreCompletoAlert">⚠️ Ud ya está matriculado con ese nombre completo. Verifique sus datos.</div>
@@ -320,8 +330,17 @@ function escapeHtml(str) {
 
 const usandoIframeGAS = () => typeof google !== 'undefined' && google.script && google.script.run;
 
-function llamarAPI(accion, args, onSuccess, onError) {
+// ── Fetch con timeout, para no dejar nunca al usuario esperando indefinidamente ──
+function fetchConTimeout_(url, opciones, ms) {
+    const controller = new AbortController();
+    const id = setTimeout(function() { controller.abort(); }, ms);
+    return fetch(url, Object.assign({}, opciones, { signal: controller.signal }))
+        .finally(function() { clearTimeout(id); });
+}
+
+function llamarAPI(accion, args, onSuccess, onError, timeoutMs) {
     args = args || [];
+    timeoutMs = timeoutMs || 15000;
 
     if (usandoIframeGAS()) {
         var caller = google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onError);
@@ -334,11 +353,11 @@ function llamarAPI(accion, args, onSuccess, onError) {
         return;
     }
 
-    fetch(WEBAPP_URL, {
+    fetchConTimeout_(WEBAPP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: accion, args: args })
-    })
+    }, timeoutMs)
         .then(function(res) {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.json();
@@ -405,6 +424,11 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (err) {
         console.error('Enganche de btnSiguiente:', err);
     }
+
+    // Empieza a precargar los datos del formulario apenas se abre la página,
+    // sin esperar a que el usuario pulse "Siguiente". Así cuando llega al
+    // formulario, lo más probable es que los combos ya estén listos.
+    precargarDatosFormulario();
 });
 
 let datosMatricula = {},
@@ -413,8 +437,106 @@ let timerVal = {};
 
 let dup = { codigo: null, email: null, grupo: null, celular: null, nombre: null };
 
+// ══════════════════════════════════════════════════════════════════
+//  CARGA DE COMBOS (laboratorio, grupo, escuela, docente)
+//  Estrategia:
+//   1) Intenta UNA sola llamada combinada "obtenerDatosFormulario" (rápida:
+//      1 solo arranque de Apps Script en vez de 4).
+//   2) Si esa acción no existe todavía en el backend, cae automáticamente
+//      a las 4 llamadas individuales de siempre (compatibilidad).
+//   3) Usa una copia en localStorage (10 min) para que, si el usuario
+//      recarga la página, los combos aparezcan al instante mientras se
+//      refrescan en segundo plano.
+// ══════════════════════════════════════════════════════════════════
+
+const CACHE_KEY = 'unap_matricula_combos_v1';
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutos
+
+function leerCache_() {
+    try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || !obj.timestamp || (Date.now() - obj.timestamp) > CACHE_TTL_MS) return null;
+        return obj.datos || null;
+    } catch (e) { return null; }
+}
+
+function guardarCache_(datos) {
+    try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), datos: datos }));
+    } catch (e) { /* localStorage no disponible: seguimos sin cache */ }
+}
+
+let _yaSePrecargo = false;
+
+function precargarDatosFormulario() {
+    if (_yaSePrecargo) return;
+    _yaSePrecargo = true;
+
+    // 1) Si hay algo en cache reciente, píntalo de inmediato (sensación de carga instantánea).
+    const cache = leerCache_();
+    if (cache) {
+        pintarCombos_(cache, /*desdeCache=*/true);
+    }
+
+    // 2) Intenta la ruta rápida: un solo viaje al servidor con todo junto.
+    llamarAPI('obtenerDatosFormulario', [], function(r) {
+        if (r && r.laboratorios && r.escuelas && r.docentes && r.grupos) {
+            guardarCache_(r);
+            pintarCombos_(r, false);
+            return;
+        }
+        // El backend respondió pero sin el formato esperado: cae a las 4 llamadas.
+        cargarCombosIndividualmente_();
+    }, function() {
+        // La acción combinada no existe aún en el backend (o falló): cae a las 4 llamadas.
+        cargarCombosIndividualmente_();
+    }, 9000);
+}
+
+function pintarCombos_(datos, desdeCache) {
+    poblarSelectGenerico('laboratorio', datos.laboratorios, 'No hay laboratorios disponibles');
+    poblarSelectGenerico('escuela', datos.escuelas, 'No hay escuelas disponibles');
+    poblarSelectGenerico('docente', datos.docentes, 'No hay docentes disponibles');
+    poblarGrupos(datos.grupos);
+    if (!desdeCache) {
+        ['laboratorio', 'escuela', 'docente', 'grupo'].forEach(function(c) { limpiarErrorSelect_(c); });
+    }
+}
+
+function cargarCombosIndividualmente_() {
+    cargarGrupos();
+    cargarLaboratorios();
+    cargarEscuelas();
+    cargarDocentes();
+}
+
+function mostrarErrorSelect_(campo, mensaje) {
+    const cont = document.getElementById(campo + 'Error');
+    if (!cont) return;
+    cont.innerHTML = escapeHtml(mensaje) +
+        ' <button type="button" class="btn-reintentar" data-campo="' + campo + '">Reintentar</button>';
+    const btn = cont.querySelector('.btn-reintentar');
+    if (btn) btn.addEventListener('click', function() { reintentarCombo_(campo); });
+}
+
+function limpiarErrorSelect_(campo) {
+    const cont = document.getElementById(campo + 'Error');
+    if (cont) cont.innerHTML = '';
+}
+
+function reintentarCombo_(campo) {
+    limpiarErrorSelect_(campo);
+    if (campo === 'grupo') { cargarGrupos(); return; }
+    if (campo === 'laboratorio') { cargarLaboratorios(); return; }
+    if (campo === 'escuela') { cargarEscuelas(); return; }
+    if (campo === 'docente') { cargarDocentes(); return; }
+}
+
 function cargarGrupos() {
-    llamarAPI('obtenerGrupos', [], poblarGrupos, function() { poblarGrupos(null); });
+    llamarAPI('obtenerGrupos', [], function(lista) { limpiarErrorSelect_('grupo'); poblarGrupos(lista); },
+        function() { mostrarErrorSelect_('grupo', 'No se pudo cargar.'); poblarGrupos(null); }, 12000);
 }
 
 function poblarGrupos(lista) {
@@ -465,20 +587,20 @@ function poblarSelectGenerico(selectId, lista, sinDatosMsg) {
 
 function cargarLaboratorios() {
     llamarAPI('obtenerLaboratorios', [],
-        function(lista) { poblarSelectGenerico('laboratorio', lista, 'No hay laboratorios disponibles'); },
-        function() { poblarSelectGenerico('laboratorio', null, 'No hay laboratorios disponibles'); });
+        function(lista) { limpiarErrorSelect_('laboratorio'); poblarSelectGenerico('laboratorio', lista, 'No hay laboratorios disponibles'); },
+        function() { mostrarErrorSelect_('laboratorio', 'No se pudo cargar.'); poblarSelectGenerico('laboratorio', null, 'No hay laboratorios disponibles'); }, 12000);
 }
 
 function cargarEscuelas() {
     llamarAPI('obtenerEscuelas', [],
-        function(lista) { poblarSelectGenerico('escuela', lista, 'No hay escuelas disponibles'); },
-        function() { poblarSelectGenerico('escuela', null, 'No hay escuelas disponibles'); });
+        function(lista) { limpiarErrorSelect_('escuela'); poblarSelectGenerico('escuela', lista, 'No hay escuelas disponibles'); },
+        function() { mostrarErrorSelect_('escuela', 'No se pudo cargar.'); poblarSelectGenerico('escuela', null, 'No hay escuelas disponibles'); }, 12000);
 }
 
 function cargarDocentes() {
     llamarAPI('obtenerDocentes', [],
-        function(lista) { poblarSelectGenerico('docente', lista, 'No hay docentes disponibles'); },
-        function() { poblarSelectGenerico('docente', null, 'No hay docentes disponibles'); });
+        function(lista) { limpiarErrorSelect_('docente'); poblarSelectGenerico('docente', lista, 'No hay docentes disponibles'); },
+        function() { mostrarErrorSelect_('docente', 'No se pudo cargar.'); poblarSelectGenerico('docente', null, 'No hay docentes disponibles'); }, 12000);
 }
 
 function chkBtn() {
@@ -1305,14 +1427,6 @@ enganchar_(function() {
 enganchar_(function() {
     window.addEventListener('click', function(e) { if (e.target === document.getElementById('confirmModal')) cerrarModal(); });
 }, 'modal click-outside');
-
-enganchar_(function() {
-    cargarGrupos();
-    cargarLaboratorios();
-    cargarEscuelas();
-    cargarDocentes();
-    chkBtn();
-}, 'carga inicial de combos');
 
 window.addEventListener('error', function(ev) {
     console.error('Error inesperado:', ev.error || ev.message);
